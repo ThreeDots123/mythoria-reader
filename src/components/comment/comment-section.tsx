@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CircleAlertIcon } from "lucide-react";
+import { MessageSquare } from "lucide-react";
 import CommentForm from "./comment-form";
 import CommentItem, { CommentData } from "./comment-item";
 import {
@@ -50,7 +48,6 @@ export default function CommentSection({
         return;
       }
 
-      // Transform the data to match CommentData interface
       const transformedComments = (result.data || []).map((comment: any) => ({
         ...comment,
         createdAt: new Date(comment.createdAt),
@@ -84,30 +81,21 @@ export default function CommentSection({
     loadComments();
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <Alert variant="destructive">
-        <CircleAlertIcon className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>{error}</AlertDescription>
-      </Alert>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4 text-foreground">
-          Comments ({comments.length})
-        </h3>
+    <div>
+      <div className="flex items-center gap-2.5 mb-6">
+        <MessageSquare className="w-5 h-5 text-primary" />
+        <h2 className="text-xl font-bold text-foreground">
+          Comments
+          {!isLoading && !error && (
+            <span className="text-muted-foreground font-normal text-base ml-2">
+              {comments.length}
+            </span>
+          )}
+        </h2>
+      </div>
+
+      <div className="mb-6">
         <CommentForm
           seriesId={seriesId}
           chapterId={chapterId}
@@ -115,15 +103,24 @@ export default function CommentSection({
         />
       </div>
 
-      <div className="space-y-4">
-        {comments.length === 0 ? (
-          <Card className="p-8 border border-[#27272A]">
-            <p className="text-center text-muted-foreground">
-              No comments yet. Be the first to comment!
-            </p>
-          </Card>
-        ) : (
-          comments.map((comment) => (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Spinner />
+        </div>
+      ) : error ? (
+        <div className="py-8 text-center">
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      ) : comments.length === 0 ? (
+        <div className="py-12 text-center rounded-xl border border-border/20 bg-card/30">
+          <MessageSquare className="w-8 h-8 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">
+            No comments yet. Be the first to share your thoughts!
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {comments.map((comment) => (
             <CommentItem
               key={comment.id}
               comment={comment}
@@ -131,9 +128,9 @@ export default function CommentSection({
               onCommentDeleted={handleCommentDeleted}
               currentUserId={currentUserId}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

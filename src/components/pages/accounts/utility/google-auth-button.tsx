@@ -69,7 +69,7 @@ export default function GoogleAuthButton({
     <Button
       variant="outline"
       type="button"
-      className="bg-[#27272A] text-xs"
+      className="bg-card text-xs"
       disabled={isLoading.state}
       onClick={handleGoogleAuth}
     >

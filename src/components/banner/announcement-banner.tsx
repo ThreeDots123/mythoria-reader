@@ -3,6 +3,7 @@
 import { X, AlertCircle, CheckCircle, AlertTriangle, Info } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 
 interface AnnouncementBannerProps {
   id?: string;
@@ -20,27 +21,27 @@ interface AnnouncementBannerProps {
 
 const typeConfig = {
   info: {
-    bgColor: "bg-announcement-info",
-    textColor: "text-announcement-info-text",
-    borderColor: "border-announcement-info-border",
+    iconBg: "bg-amber-500/20",
+    iconColor: "text-amber-400",
+    accentColor: "from-amber-500/20 to-transparent",
     icon: Info,
   },
   success: {
-    bgColor: "bg-announcement-success",
-    textColor: "text-announcement-success-text",
-    borderColor: "border-announcement-success-border",
+    iconBg: "bg-emerald-500/20",
+    iconColor: "text-emerald-400",
+    accentColor: "from-emerald-500/20 to-transparent",
     icon: CheckCircle,
   },
   warning: {
-    bgColor: "bg-announcement-warning",
-    textColor: "text-announcement-warning-text",
-    borderColor: "border-announcement-warning-border",
+    iconBg: "bg-orange-500/20",
+    iconColor: "text-orange-400",
+    accentColor: "from-orange-500/20 to-transparent",
     icon: AlertTriangle,
   },
   error: {
-    bgColor: "bg-announcement-error",
-    textColor: "text-announcement-error-text",
-    borderColor: "border-announcement-error-border",
+    iconBg: "bg-red-500/20",
+    iconColor: "text-red-400",
+    accentColor: "from-red-500/20 to-transparent",
     icon: AlertCircle,
   },
 };
@@ -56,8 +57,6 @@ export function AnnouncementBanner({
 }: AnnouncementBannerProps) {
   const [isVisible, setIsVisible] = useState(true);
 
-  if (!isVisible) return null;
-
   const config = typeConfig[type];
   const Icon = config.icon;
 
@@ -67,73 +66,73 @@ export function AnnouncementBanner({
   };
 
   return (
-    <div
-      id={id}
-      role="alert"
-      className={cn(
-        "w-full border-l-4 px-6 py-4 flex items-start gap-4 transition-all duration-300 ease-out",
-        config.bgColor,
-        config.borderColor,
-      )}
-    >
-      {/* Icon */}
-      <Icon className={cn("h-5 w-5 flex-shrink-0 mt-0.5", config.textColor)} />
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div
+          id={id}
+          role="alert"
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="relative overflow-hidden rounded-xl bg-card/90 backdrop-blur-xl border border-border/50 shadow-xl"
+        >
+          <div className={cn("absolute inset-0 bg-gradient-to-r opacity-40", config.accentColor)} />
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {title && (
-          <h3 className={cn("font-semibold text-sm mb-1", config.textColor)}>
-            {title}
-          </h3>
-        )}
-        <p className={cn("text-sm leading-relaxed", config.textColor)}>
-          {message}
-        </p>
+          <div className="relative flex items-start gap-3 px-4 py-3.5">
+            <div className={cn("flex-shrink-0 rounded-lg p-1.5 mt-0.5", config.iconBg)}>
+              <Icon className={cn("h-4 w-4", config.iconColor)} />
+            </div>
 
-        {/* Action Button */}
-        {action && (
-          <div className="mt-3">
-            {action.href ? (
-              <a
-                href={action.href}
-                className={cn(
-                  "inline-flex items-center text-sm font-medium underline underline-offset-2 hover:opacity-80 transition-opacity",
-                  config.textColor,
-                )}
-              >
-                {action.label}
-                <span className="ml-1">→</span>
-              </a>
-            ) : (
+            <div className="flex-1 min-w-0">
+              {title && (
+                <p className="font-semibold text-sm text-foreground">{title}</p>
+              )}
+              <p className={cn("text-sm text-muted-foreground leading-relaxed", title && "mt-0.5")}>
+                {message}
+              </p>
+
+              {action && (
+                <div className="mt-2">
+                  {action.href ? (
+                    <a
+                      href={action.href}
+                      className={cn(
+                        "inline-flex items-center gap-1 text-xs font-semibold rounded-md px-3 py-1.5 transition-colors",
+                        "bg-primary/15 text-primary hover:bg-primary/25",
+                      )}
+                    >
+                      {action.label}
+                      <span>→</span>
+                    </a>
+                  ) : (
+                    <button
+                      onClick={action.onClick}
+                      className={cn(
+                        "inline-flex items-center gap-1 text-xs font-semibold rounded-md px-3 py-1.5 transition-colors",
+                        "bg-primary/15 text-primary hover:bg-primary/25",
+                      )}
+                    >
+                      {action.label}
+                      <span>→</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {dismissible && (
               <button
-                onClick={action.onClick}
-                className={cn(
-                  "inline-flex items-center text-sm font-medium underline underline-offset-2 hover:opacity-80 transition-opacity",
-                  config.textColor,
-                )}
+                onClick={handleDismiss}
+                className="flex-shrink-0 rounded-md p-1 text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
+                aria-label="Close announcement"
               >
-                {action.label}
-                <span className="ml-1">→</span>
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
-        )}
-      </div>
-
-      {/* Close Button */}
-      {dismissible && (
-        <button
-          onClick={handleDismiss}
-          className={cn(
-            "flex-shrink-0 h-5 w-5 rounded hover:opacity-80 transition-opacity",
-            config.textColor,
-          )}
-          aria-label="Close announcement"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
   );
 }
-

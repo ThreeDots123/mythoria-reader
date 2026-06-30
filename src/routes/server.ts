@@ -1,3 +1,6 @@
+export const recentlyReleasedChaptersRoute = "/chapter/public/recently-released";
+export const newSeriesRoute = "/series/public/new";
+export const latestUpdatesRoute = "/chapter/public/latest-updates";
 export const latestChaptersRoute = "/chapter/public/latest";
 export const latestSeriesRoute = "/series/public/latest";
 export const popularTodaySeriesRoute = "/series/public/popular-today";
@@ -44,6 +47,9 @@ export const deleteCommentRoute = (commentId: string) =>
 export const rateSeriesRoute = (seriesId: string) => `/series/${seriesId}/rate`;
 export const getUserRatingRoute = (seriesId: string) =>
   `/series/${seriesId}/my-rating`;
+export const upcomingReleasesRoute = "/chapter/public/upcoming";
+export const featuredSeriesRoute = "/series/public/featured";
+export const risingStarsRoute = "/series/public/rising-stars";
 export const readerDiscordAuthenticateRoute =
   "/account/reader/discord/authenticate";
 export const readerGoogleAuthenticateRoute =
