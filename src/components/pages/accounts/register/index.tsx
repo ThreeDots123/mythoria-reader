@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FaGoogle } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -103,9 +102,23 @@ export default function RegisterAccount() {
           <h2 className="mb-1.5 text-2xl font-semibold">
             Register on Mythoria
           </h2>
-          <p className="text-muted-foreground">
-            Enjoy quality novels, The special vault for top novels.
+          <p className="text-muted-foreground mb-3">
+            Join thousands of readers on the special vault for top novels.
           </p>
+          <ul className="text-sm text-muted-foreground space-y-1">
+            <li className="flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
+              Free chapters on every series
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
+              Bookmark and track your reading progress
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
+              Unlock premium chapters with coins
+            </li>
+          </ul>
         </div>
 
         {/* Error Message */}
@@ -121,7 +134,7 @@ export default function RegisterAccount() {
             type="text"
             autoComplete="username"
             placeholder="What is your username?"
-            className="h-10 bg-[#27272A] border-none"
+            className="h-10 bg-card border-none"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             required
@@ -131,7 +144,7 @@ export default function RegisterAccount() {
             type="email"
             autoComplete="email"
             placeholder="Enter your email"
-            className="h-10 bg-[#27272A] border-none"
+            className="h-10 bg-card border-none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required

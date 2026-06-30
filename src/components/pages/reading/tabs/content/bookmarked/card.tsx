@@ -55,7 +55,7 @@ export default function BookmarkedChaptersCard({
   };
 
   return (
-    <Card className="overflow-hidden hover:border-none hover:bg-[#27272A]/60 transition-colors max-w-xl">
+    <Card className="overflow-hidden hover:border-none hover:bg-card/60 transition-colors max-w-xl">
       <div className="flex gap-6 p-6">
         <div className="shrink-0">
           <Image

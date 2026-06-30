@@ -76,7 +76,7 @@ export function ContentDialogDrawer({
       <div className={wrapperClass}>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>{trigger}</DialogTrigger>
-          <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto bg-[#222222] border-border text-white">
+          <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto bg-card border-border text-white">
             <DialogHeader>
               <DialogTitle>{title}</DialogTitle>
             </DialogHeader>
@@ -93,7 +93,7 @@ export function ContentDialogDrawer({
     <div className={wrapperClass}>
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>{trigger}</DrawerTrigger>
-        <DrawerContent className="max-h-[90vh] bg-[#222222] border-border">
+        <DrawerContent className="max-h-[90vh] bg-card border-border">
           <DrawerHeader className="text-left">
             <DrawerTitle>{title}</DrawerTitle>
           </DrawerHeader>
@@ -102,7 +102,7 @@ export function ContentDialogDrawer({
           </div>
           <div className="p-4">
             <DrawerClose asChild>
-              <Button variant="outline" className="w-full bg-[#222222]">
+              <Button variant="outline" className="w-full bg-card">
                 Close
               </Button>
             </DrawerClose>

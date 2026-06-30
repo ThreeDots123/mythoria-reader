@@ -91,7 +91,7 @@ export default function ForgotPasswordAccount() {
                 type="email"
                 placeholder="Enter your email"
                 autoComplete="email"
-                className="h-10 bg-[#27272A] border-none"
+                className="h-10 bg-card border-none"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

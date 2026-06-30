@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FaGoogle } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -99,7 +98,9 @@ export default function LoginAccount() {
         <div>
           <h2 className="mb-1.5 text-2xl font-semibold">Sign in to Mythoria</h2>
           <p className="text-muted-foreground">
-            Enjoy quality novels, The special vault for top novels.
+            {redirect?.includes("/chapter/")
+              ? "Sign in to continue reading where you left off."
+              : "Enjoy quality novels, The special vault for top novels."}
           </p>
         </div>
 
@@ -116,7 +117,7 @@ export default function LoginAccount() {
             type="email"
             autoComplete="email"
             placeholder="Enter your email"
-            className="h-10 bg-[#27272A] border-none"
+            className="h-10 bg-card border-none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required

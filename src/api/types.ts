@@ -1,3 +1,43 @@
+export interface NewSeriesResponse {
+  id: string;
+  title: string;
+  slug: string;
+  featuredImage: string;
+  status: string;
+  novelType: string;
+  categories: string[];
+  addedAgo: string;
+  rating: number | null;
+  views: number;
+  likes: number;
+  bookmarks: number;
+}
+
+export interface RecentlyReleasedChapterResponse {
+  chapterNumber: number;
+  releasedAgo: string;
+  seriesImage: string;
+  seriesName: string;
+  seriesSlug: string;
+}
+
+export interface LatestUpdateChapter {
+  chapterNumber: number;
+  title: string;
+  timeAgo: string;
+  isPremium: boolean;
+  priceInCoins: number;
+  isNew: boolean;
+}
+
+export interface LatestUpdateResponse {
+  seriesName: string;
+  seriesSlug: string;
+  seriesImage: string;
+  status: string;
+  chapters: LatestUpdateChapter[];
+}
+
 export interface LatestChapterResponse {
   id: string;
   title: string;
@@ -35,6 +75,34 @@ export interface PopularSeriesResponse {
   slug: string;
   featuredImage: string;
   categories: string[];
+  rating: number | null;
+  views: number;
+  novelType: string;
+}
+
+export interface FeaturedSeriesResponse {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  featuredImage: string;
+  status: string;
+  novelType: string;
+  categories: string[];
+  averageRating: number;
+  totalViews: number;
+  chapterCount: number;
+}
+
+export interface RisingStarResponse {
+  id: string;
+  title: string;
+  slug: string;
+  featuredImage: string;
+  novelType: string;
+  categories: string[];
+  weeklyReads: number;
+  averageRating: number;
 }
 
 export interface AllSeriesChapterResponse {
@@ -42,6 +110,7 @@ export interface AllSeriesChapterResponse {
   chapterNumber: number;
   isPremium: boolean;
   publishDate: string;
+  priceInCoins: number;
 }
 
 export interface AllSeriesResponse {
@@ -73,6 +142,13 @@ export interface SeriesDetailsChapterResponse {
   priceInCoins: number;
 }
 
+export interface SeriesUpcomingRelease {
+  nextReleaseAt: string;
+  chaptersInNextBatch: number;
+  nextChapterNumber: number;
+  isEstimate: boolean;
+}
+
 export interface SeriesDetailsResponse {
   id: string;
   title: string;
@@ -92,6 +168,7 @@ export interface SeriesDetailsResponse {
   totalBookmarks: number;
   totalLikes: number;
   totalChapters: number;
+  upcomingRelease?: SeriesUpcomingRelease | null;
 }
 
 export interface SeriesDetailsListResponse {
@@ -205,6 +282,19 @@ export interface OngoingSeriesItem {
   lastChapterNumber: number;
   totalChapters: number;
   updatedAt: string;
+}
+
+export interface UpcomingReleaseResponse {
+  seriesId: string;
+  seriesName: string;
+  seriesSlug: string;
+  seriesImage: string;
+  novelType: string;
+  nextReleaseAt: string;
+  releasesIn: string;
+  chaptersInNextBatch: number;
+  nextChapterNumber: number;
+  isEstimate: boolean;
 }
 
 export interface PurchaseChapterResponse {

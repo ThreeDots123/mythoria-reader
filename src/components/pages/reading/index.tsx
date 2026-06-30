@@ -48,7 +48,7 @@ export default function ReadingNovelsComponent() {
             onValueChange={setTab}
             className="gap-4 w-full"
           >
-            <TabsList className="h-full bg-[#27272A] w-full max-w-4xl overflow-auto">
+            <TabsList className="h-full bg-card w-full max-w-4xl overflow-auto">
               {tabsTriggers.map(({ icon: Icon, name, value }) => (
                 <TabsTrigger
                   key={value}

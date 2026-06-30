@@ -1,55 +1,30 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
-import { getLatestChaptersAction } from "@/server-actions/chapter";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BookOpen, Clock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { allSeries } from "@/routes/client";
-
-interface LatestChapter {
-  id: string;
-  title: string;
-  chapterNumber: number;
-  publishDate: string;
-  seriesId: string;
-  series: {
-    id: string;
-    title: string;
-    slug: string;
-    featuredImage: string;
-    categories: string[];
-  };
-  contentPreview: string;
-}
+import { getRecentlyReleasedChaptersAction } from "@/server-actions/chapter";
+import { RecentlyReleasedChapterResponse } from "@/api/types";
+import Carousel from "@/components/utility/carousel";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function HeroSkeleton() {
   return (
-    <section className="relative min-h-[400px] md:h-[500px] overflow-hidden bg-linear-to-r from-background via-background to-background">
-      <div className="relative h-full max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-0 flex flex-col md:flex-row items-center md:items-stretch">
-        {/* Content skeleton - left half */}
-        <div className="w-full md:w-1/2 md:pr-8 z-10 flex flex-col justify-center space-y-3 md:space-y-4 order-2 md:order-1">
-          <Skeleton className="h-4 w-24 bg-gray-400" />
-          <Skeleton className="h-8 md:h-9 w-full max-w-md bg-gray-400" />
-          <Skeleton className="h-4 w-full bg-gray-400" />
-          <Skeleton className="h-4 w-3/4 max-w-md bg-gray-400" />
-          <Skeleton className="h-4 w-3/4 max-w-sm md:hidden bg-gray-400" />
-          <div className="flex gap-2 flex-wrap py-2 md:py-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton
-                key={i}
-                className="h-6 w-16 md:w-20 rounded-full bg-gray-400"
-              />
-            ))}
-          </div>
-          <Skeleton className="h-11 w-full md:w-40 rounded-full mt-2 md:mt-4 bg-gray-400" />
+    <section className="pt-6 pb-2">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center gap-2.5 mb-5">
+          <BookOpen className="w-5 h-5 text-muted-foreground" />
+          <Skeleton className="h-6 w-48 bg-muted" />
         </div>
-
-        {/* Image skeleton - right half */}
-        <div className="w-full md:w-1/2 h-[250px] md:h-full relative mb-4 md:mb-0 order-1 md:order-2">
-          <Skeleton className="w-full h-full rounded-lg bg-gray-400" />
+        <div className="flex gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex-none w-[160px] sm:w-[175px]">
+              <Skeleton className="aspect-3/4 rounded-xl bg-muted mb-2.5" />
+              <Skeleton className="h-4 w-full bg-muted" />
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -57,170 +32,164 @@ function HeroSkeleton() {
 }
 
 export default function Hero() {
-  const [chapters, setChapters] = useState<LatestChapter[]>([]);
+  const [chapters, setChapters] = useState<RecentlyReleasedChapterResponse[]>(
+    []
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeSlide, setActiveSlide] = useState(0);
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
-    const fetchLatestChapters = async () => {
-      setLoading(true);
-      setError(null);
+    const fetchChapters = async () => {
       try {
-        const result = await getLatestChaptersAction(5); // Get top 5 latest chapters
+        const result = await getRecentlyReleasedChaptersAction();
         if (result.success && result.data) {
           setChapters(result.data);
         } else {
-          setError(result.error || "Failed to fetch latest chapters");
+          setError(
+            result.error || "Failed to fetch recently released chapters"
+          );
         }
       } catch (err: any) {
         setError(err.message || "An unexpected error occurred");
-        console.error("Error fetching latest chapters:", err);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchLatestChapters();
+    fetchChapters();
   }, []);
 
-  // Auto-rotate slides
-  useEffect(() => {
-    if (chapters.length <= 1) return;
+  const grouped = useMemo(() => {
+    const map = new Map<
+      string,
+      { latest: RecentlyReleasedChapterResponse; count: number }
+    >();
+    for (const chapter of chapters) {
+      const existing = map.get(chapter.seriesSlug);
+      if (!existing) {
+        map.set(chapter.seriesSlug, { latest: chapter, count: 1 });
+      } else {
+        existing.count++;
+        if (chapter.chapterNumber > existing.latest.chapterNumber) {
+          existing.latest = chapter;
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [chapters]);
 
-    const interval = setInterval(() => {
-      setIsTransitioning(true);
-
-      // Small delay to trigger transition
-      setTimeout(() => {
-        setActiveSlide((prev) => (prev + 1) % chapters.length);
-        setIsTransitioning(false);
-      }, 50);
-    }, 5000); // Change slide every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [chapters.length]);
-
-  const handleDotClick = useCallback((index: number) => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setActiveSlide(index);
-      setIsTransitioning(false);
-    }, 50);
-  }, []);
-
-  if (loading) {
-    return <HeroSkeleton />;
-  }
+  if (loading) return <HeroSkeleton />;
 
   if (error || chapters.length === 0) {
     return (
-      <section className="relative min-h-[400px] md:h-[500px] overflow-hidden bg-linear-to-r from-background via-background to-background">
-        <div className="relative h-full max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-0 flex items-center justify-center">
-          <p className="text-muted-foreground text-sm md:text-base">
-            {error || "No chapters available"}
-          </p>
+      <section className="pt-6 pb-2">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex items-center gap-2.5 mb-5">
+            <BookOpen className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-bold text-foreground">
+              New Chapters Released
+            </h2>
+          </div>
+          <div className="relative overflow-hidden rounded-xl border border-border/20 bg-surface-elevated py-14 px-6">
+            <div className="absolute inset-0 bg-linear-to-br from-primary/5 via-transparent to-primary/5" />
+            <div className="relative flex flex-col items-center text-center">
+              <div className="relative mb-4">
+                <div className="absolute inset-0 bg-primary/10 rounded-full blur-xl animate-pulse" />
+                <div className="relative w-14 h-14 rounded-full bg-muted/50 flex items-center justify-center">
+                  <Clock className="w-7 h-7 text-muted-foreground/50" />
+                </div>
+              </div>
+              <h3 className="text-base font-semibold text-foreground mb-1.5">
+                No recent chapters yet
+              </h3>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                Our translators are hard at work. New chapters typically drop
+                throughout the day — stay tuned!
+              </p>
+              <Link
+                href={allSeries}
+                className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                <BookOpen className="w-4 h-4" />
+                Browse all series
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
     );
   }
 
-  const currentChapter = chapters[activeSlide];
-
   return (
-    <section className="relative min-h-[500px] md:h-[500px] overflow-hidden bg-linear-to-r from-background via-background to-background">
-      {/* Background */}
-      <div className="absolute inset-0 opacity-20 z-10">
-        <div className="absolute inset-0 bg-linear-to-r from-black via-purple-900/30 to-black" />
-      </div>
+    <section className="pt-6 pb-2">
+      <div className="max-w-7xl mx-auto px-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2.5">
+            <BookOpen className="w-5 h-5 text-primary" />
+            <h2 className="text-xl font-bold text-foreground">
+              New Chapters Released
+            </h2>
+            <span className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-md">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              {chapters.length} new
+            </span>
+          </div>
+        </div>
 
-      <div className="relative h-full max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-0 flex flex-col md:flex-row items-center md:items-stretch">
-        {/* Content - Mobile: Full width, Desktop: Left half */}
-        <div className="w-full md:w-1/2 md:pr-8 z-10 flex flex-col justify-center space-y-3 md:space-y-4 order-2 md:order-1">
-          <div
-            className={`space-y-3 md:space-y-4 transition-opacity duration-500 ${
-              isTransitioning ? "opacity-0" : "opacity-100"
-            }`}
-            key={activeSlide}
-          >
-            <p className="text-muted-foreground text-xs md:text-sm">
-              Chapter: {currentChapter.chapterNumber}
-            </p>
-            <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground line-clamp-2 leading-tight">
-              {currentChapter.series.title}
-            </h1>
-            <p className="text-muted-foreground text-sm md:text-base leading-relaxed line-clamp-2 md:line-clamp-3">
-              {currentChapter.contentPreview}
-            </p>
-
-            {/* Tags */}
-            {currentChapter.series.categories.length > 0 && (
-              <div className="flex gap-2 flex-wrap py-2 md:py-4">
-                {currentChapter.series.categories.slice(0, 4).map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-2 md:px-3 py-1 bg-muted text-foreground rounded-full text-xs md:text-sm hover:bg-card transition"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* CTA Button */}
+        <Carousel>
+          {grouped.map(({ latest, count }) => (
             <Link
-              href={`/series/${currentChapter.series.slug}/chapter/${currentChapter.chapterNumber}`}
-              className="inline-block mb-2"
+              key={latest.seriesSlug}
+              href={`${allSeries}/${latest.seriesSlug}`}
+              className="group flex-none w-[160px] sm:w-[175px] pr-4"
             >
-              <Button
-                size="lg"
-                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full mt-2 md:mt-4 px-4 md:px-6 gap-1 text-sm md:text-base w-full md:w-auto"
-              >
-                Start Reading{" "}
-                <ChevronRight size={18} className="md:w-5 md:h-5" />
-              </Button>
+              <div className="relative aspect-3/4 rounded-xl overflow-hidden mb-2.5">
+                {latest.seriesImage ? (
+                  <Image
+                    src={latest.seriesImage}
+                    alt={latest.seriesName}
+                    fill
+                    sizes="175px"
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-linear-to-br from-muted to-muted/50 flex items-center justify-center">
+                    <span className="text-muted-foreground/40 text-xs">
+                      No Cover
+                    </span>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+
+                <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded">
+                  Ch. {latest.chapterNumber}
+                </div>
+
+                <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded">
+                  <Clock className="w-2.5 h-2.5" />
+                  {latest.releasedAgo}
+                </div>
+
+                {count > 1 && (
+                  <div className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-semibold px-2 py-0.5 rounded">
+                    +{count - 1} more
+                  </div>
+                )}
+
+                <div className="absolute bottom-0 inset-x-0 p-2.5 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+                  <div className="flex items-center justify-center gap-1.5 bg-primary text-primary-foreground text-xs font-semibold py-2 rounded-lg">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Read Ch. {latest.chapterNumber}
+                  </div>
+                </div>
+              </div>
+
+              <h3 className="text-sm font-medium text-foreground line-clamp-2 group-hover:text-primary transition-colors">
+                {latest.seriesName}
+              </h3>
             </Link>
-          </div>
-        </div>
-
-        {/* Image - Mobile: Full width top, Desktop: Right half */}
-        <div className="w-full md:w-1/2 h-[250px] md:h-full relative mb-4 md:mb-0 order-1 md:order-2">
-          <div
-            className={`relative h-full transition-opacity duration-500 ${
-              isTransitioning ? "opacity-0" : "opacity-100"
-            }`}
-            key={`image-${activeSlide}`}
-          >
-            <Image
-              src={currentChapter.series.featuredImage || "/placeholder.svg"}
-              alt={`Cover of ${currentChapter.series.title}`}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover max-sm:object-contain rounded-lg md:rounded-lg"
-            />
-            <div className="absolute inset-0 bg-linear-to-b md:bg-linear-to-l from-transparent via-transparent to-background md:to-background rounded-lg pointer-events-none" />
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation dots */}
-      {chapters.length > 1 && (
-        <div className="absolute bottom-3 md:bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-2">
-          {chapters.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => handleDotClick(index)}
-              className={`h-1.5 md:h-2 rounded-full transition-all duration-300 ${
-                index === activeSlide
-                  ? "bg-primary w-6 md:w-8"
-                  : "bg-muted-foreground/50 w-1.5 md:w-2 hover:bg-muted-foreground/70"
-              }`}
-              aria-label={`Go to slide ${index + 1}`}
-            />
           ))}
-        </div>
-      )}
+        </Carousel>
+      </div>
     </section>
   );
 }

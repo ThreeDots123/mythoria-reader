@@ -1,5 +1,8 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
 import {
+  newSeriesRoute,
+  recentlyReleasedChaptersRoute,
+  latestUpdatesRoute,
   latestChaptersRoute,
   latestSeriesRoute,
   popularTodaySeriesRoute,
@@ -33,11 +36,17 @@ import {
   deleteCommentRoute,
   rateSeriesRoute,
   getUserRatingRoute,
+  upcomingReleasesRoute,
+  featuredSeriesRoute,
+  risingStarsRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
   validateResetTokenRoute,
 } from "@/routes/server";
 import {
+  NewSeriesResponse,
+  RecentlyReleasedChapterResponse,
+  LatestUpdateResponse,
   LatestChapterResponse,
   LatestSeriesResponse,
   PopularSeriesResponse,
@@ -60,6 +69,9 @@ import {
   LastReadChapterResponse,
   SetLastReadChapterResponse,
   OngoingSeriesItem,
+  UpcomingReleaseResponse,
+  FeaturedSeriesResponse,
+  RisingStarResponse,
 } from "./types";
 import { User } from "@/utils/auth";
 
@@ -177,6 +189,27 @@ class ApiClient {
     }
   }
 
+  async getNewSeries() {
+    return this.execute<Array<NewSeriesResponse>>({
+      method: "GET",
+      endpoint: newSeriesRoute,
+    });
+  }
+
+  async getLatestUpdates() {
+    return this.execute<Array<LatestUpdateResponse>>({
+      method: "GET",
+      endpoint: latestUpdatesRoute,
+    });
+  }
+
+  async getRecentlyReleasedChapters() {
+    return this.execute<Array<RecentlyReleasedChapterResponse>>({
+      method: "GET",
+      endpoint: recentlyReleasedChaptersRoute,
+    });
+  }
+
   /**
    * Get latest chapters
    * @param limit - Optional limit for number of chapters (defaults to 10)
@@ -243,6 +276,8 @@ class ApiClient {
       novelType?: string[];
       categories?: string[];
       search?: string;
+      sort?: string;
+      chapters?: string;
     }
   ) {
     const params: Record<string, string> = {};
@@ -259,6 +294,12 @@ class ApiClient {
     }
     if (filters?.search) {
       params.search = filters.search;
+    }
+    if (filters?.sort) {
+      params.sort = filters.sort;
+    }
+    if (filters?.chapters) {
+      params.chapters = filters.chapters;
     }
 
     return this.execute<AllSeriesListResponse>({
@@ -825,6 +866,27 @@ class ApiClient {
   /**
    * Get active announcements for the public site
    */
+  async getFeaturedSeries() {
+    return this.execute<Array<FeaturedSeriesResponse>>({
+      method: "GET",
+      endpoint: featuredSeriesRoute,
+    });
+  }
+
+  async getRisingStars() {
+    return this.execute<Array<RisingStarResponse>>({
+      method: "GET",
+      endpoint: risingStarsRoute,
+    });
+  }
+
+  async getUpcomingReleases() {
+    return this.execute<Array<UpcomingReleaseResponse>>({
+      method: "GET",
+      endpoint: upcomingReleasesRoute,
+    });
+  }
+
   async getActiveAnnouncements() {
     return this.execute<
       Array<{

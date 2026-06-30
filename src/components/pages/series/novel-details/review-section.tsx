@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Star } from "lucide-react";
+import { Star, LogIn } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { rateSeriesAction, getUserRatingAction } from "@/server-actions/series";
 import { toast } from "sonner";
@@ -78,30 +77,34 @@ export default function ReviewSection({
 
   if (!isAuthenticated) {
     return (
-      <div className="mb-8 p-4 bg-card border border-border rounded-lg">
-        <p className="text-sm text-muted-foreground mb-3">
-          Sign in to rate this series
-        </p>
-        <Button
+      <div className="flex items-center gap-4 p-4 rounded-xl bg-card/50 border border-border/20">
+        <div className="flex gap-0.5">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star key={star} className="w-6 h-6 fill-muted text-muted" />
+          ))}
+        </div>
+        <div className="flex-1">
+          <p className="text-sm text-muted-foreground">
+            Sign in to rate this series
+          </p>
+        </div>
+        <button
           onClick={() => {
             const redirect = encodeURIComponent(pathname || "");
             router.push(`${login}?redirect=${redirect}`);
           }}
-          variant="outline"
-          size="sm"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
         >
-          Sign In to Rate
-        </Button>
+          <LogIn className="w-4 h-4" />
+          Sign In
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="mb-8 p-4 bg-card border border-border rounded-lg">
-      <h3 className="text-lg font-semibold mb-3 text-foreground">
-        {userRating ? "Your Rating" : "Rate this Series"}
-      </h3>
-      <div className="flex items-center gap-2">
+    <div className="flex items-center gap-4 p-4 rounded-xl bg-card/50 border border-border/20">
+      <div className="flex gap-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
@@ -110,28 +113,33 @@ export default function ReviewSection({
             onMouseEnter={() => setHoveredRating(star)}
             onMouseLeave={() => setHoveredRating(null)}
             disabled={loading || loadingUserRating}
-            className="transition-all hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="transition-transform hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
           >
             <Star
-              className={`w-8 h-8 transition-colors ${
+              className={`w-7 h-7 transition-colors ${
                 star <= displayRating
-                  ? "fill-primary text-primary"
-                  : "fill-muted text-muted-foreground"
+                  ? "fill-amber-400 text-amber-400"
+                  : "fill-muted text-muted"
               }`}
             />
           </button>
         ))}
-        {userRating && (
-          <span className="ml-2 text-sm text-muted-foreground">
-            ({userRating}/5)
-          </span>
+      </div>
+      <div className="flex-1">
+        {userRating ? (
+          <p className="text-sm text-foreground">
+            Your rating: <span className="font-semibold text-amber-400">{userRating}/5</span>
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Tap a star to rate
+          </p>
+        )}
+        {loading && (
+          <p className="text-xs text-muted-foreground mt-0.5">Submitting...</p>
         )}
       </div>
-      {loading && (
-        <p className="text-xs text-muted-foreground mt-2">Submitting...</p>
-      )}
     </div>
   );
 }
-

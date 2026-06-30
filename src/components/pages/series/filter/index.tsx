@@ -1,304 +1,276 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { MultiSelect, Option } from "@/components/ui/multi-select";
-import { ChevronDown, Funnel, SearchIcon, Check } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getCategoriesAction } from "@/server-actions/series";
+import { SearchIcon, X, ArrowUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const statusOptions: Option[] = [
+const statusOptions = [
   { label: "Ongoing", value: "ongoing" },
   { label: "Completed", value: "completed" },
+  { label: "On Hold", value: "on-hold" },
 ];
 
-const novelTypeOptions: Option[] = [
+const novelTypeOptions = [
   { label: "Novel", value: "novel" },
   { label: "Manga", value: "manga" },
   { label: "Manhwa", value: "manhwa" },
 ];
 
+const genreOptions = [
+  "Action", "Adventure", "Comedy", "Drama", "Fantasy",
+  "Historical", "Horror", "Martial Arts", "Mystery", "Romance",
+  "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller",
+];
+
+const sortOptions = [
+  { label: "Latest Update", value: "latest" },
+  { label: "Most Popular", value: "popular" },
+  { label: "Highest Rated", value: "rating" },
+  { label: "Title A-Z", value: "title-asc" },
+  { label: "Newest Added", value: "newest" },
+];
+
+const chapterCountOptions = [
+  { label: "Any", value: "" },
+  { label: "1-50", value: "1-50" },
+  { label: "50-200", value: "50-200" },
+  { label: "200-500", value: "200-500" },
+  { label: "500+", value: "500+" },
+];
+
+function ChipToggle({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors",
+        active
+          ? "bg-primary text-primary-foreground border-primary"
+          : "bg-transparent text-muted-foreground border-border/40 hover:border-border hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
 export default function SeriesFilter() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isOpen, setIsOpen] = useState(false);
 
-  // Current filter selections (local state, not applied yet)
-  const [status, setStatus] = useState<Option[]>([]);
-  const [novelType, setNovelType] = useState<Option[]>([]);
-  const [categories, setCategories] = useState<Option[]>([]);
-  const [categoryOptions, setCategoryOptions] = useState<Option[]>([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchParams.get("search") || "");
+  const [selectedStatus, setSelectedStatus] = useState<string[]>(
+    searchParams.get("status")?.split(",").filter(Boolean) || []
+  );
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    searchParams.get("novelType")?.split(",").filter(Boolean) || []
+  );
+  const [selectedGenres, setSelectedGenres] = useState<string[]>(
+    searchParams.get("categories")?.split(",").filter(Boolean) || []
+  );
+  const [selectedSort, setSelectedSort] = useState(
+    searchParams.get("sort") || "latest"
+  );
+  const [selectedChapters, setSelectedChapters] = useState(
+    searchParams.get("chapters") || ""
+  );
+  const [showAllGenres, setShowAllGenres] = useState(false);
 
-  // Applied filters (from URL, what's currently active)
-  const [appliedStatus, setAppliedStatus] = useState<Option[]>([]);
-  const [appliedNovelType, setAppliedNovelType] = useState<Option[]>([]);
-  const [appliedCategories, setAppliedCategories] = useState<Option[]>([]);
-  const [appliedSearch, setAppliedSearch] = useState("");
+  const toggleArrayItem = (arr: string[], item: string) =>
+    arr.includes(item) ? arr.filter((v) => v !== item) : [...arr, item];
 
-  const [isInitialized, setIsInitialized] = useState(false);
+  const activeCount =
+    selectedStatus.length +
+    selectedTypes.length +
+    selectedGenres.length +
+    (selectedChapters ? 1 : 0) +
+    (search.trim() ? 1 : 0);
 
-  // Load categories from API
-  useEffect(() => {
-    const loadCategories = async () => {
-      const result = await getCategoriesAction();
-      if (result.success && result.data) {
-        setCategoryOptions(
-          result.data.map((cat) => ({ label: cat, value: cat }))
-        );
-      }
-    };
-    loadCategories();
-  }, []);
-
-  // Initialize filters from URL params (only once)
-  useEffect(() => {
-    if (isInitialized || categoryOptions.length === 0) return;
-
-    const statusParam = searchParams.get("status");
-    const novelTypeParam = searchParams.get("novelType");
-    const categoriesParam = searchParams.get("categories");
-    const searchParam = searchParams.get("search");
-
-    let initialStatus: Option[] = [];
-    let initialNovelType: Option[] = [];
-    let initialCategories: Option[] = [];
-    let initialSearch = "";
-
-    if (statusParam) {
-      const statusValues = statusParam.split(",");
-      initialStatus = statusOptions.filter((opt) =>
-        statusValues.includes(opt.value)
-      );
-    }
-
-    if (novelTypeParam) {
-      const typeValues = novelTypeParam.split(",");
-      initialNovelType = novelTypeOptions.filter((opt) =>
-        typeValues.includes(opt.value)
-      );
-    }
-
-    if (categoriesParam) {
-      const categoryValues = categoriesParam.split(",");
-      initialCategories = categoryOptions.filter((opt) =>
-        categoryValues.includes(opt.value)
-      );
-    }
-
-    if (searchParam) {
-      initialSearch = searchParam;
-    }
-
-    // Set both current and applied filters to match URL
-    setStatus(initialStatus);
-    setAppliedStatus(initialStatus);
-    setNovelType(initialNovelType);
-    setAppliedNovelType(initialNovelType);
-    setCategories(initialCategories);
-    setAppliedCategories(initialCategories);
-    setSearch(initialSearch);
-    setAppliedSearch(initialSearch);
-
-    setIsInitialized(true);
-  }, [searchParams, categoryOptions, isInitialized]);
-
-  // Check if filters have changed from applied filters
-  const hasUnsavedChanges = () => {
-    const statusStr = status
-      .map((s) => s.value)
-      .sort()
-      .join(",");
-    const appliedStatusStr = appliedStatus
-      .map((s) => s.value)
-      .sort()
-      .join(",");
-
-    const novelTypeStr = novelType
-      .map((t) => t.value)
-      .sort()
-      .join(",");
-    const appliedNovelTypeStr = appliedNovelType
-      .map((t) => t.value)
-      .sort()
-      .join(",");
-
-    const categoriesStr = categories
-      .map((c) => c.value)
-      .sort()
-      .join(",");
-    const appliedCategoriesStr = appliedCategories
-      .map((c) => c.value)
-      .sort()
-      .join(",");
-
-    const searchStr = search.trim();
-
-    return (
-      statusStr !== appliedStatusStr ||
-      novelTypeStr !== appliedNovelTypeStr ||
-      categoriesStr !== appliedCategoriesStr ||
-      searchStr !== appliedSearch
-    );
-  };
-
-  // Apply filters button handler
-  const handleApplyFilters = () => {
-    const params = new URLSearchParams(searchParams.toString());
-
-    // Update status
-    if (status.length > 0) {
-      params.set("status", status.map((s) => s.value).join(","));
-    } else {
-      params.delete("status");
-    }
-
-    // Update novelType
-    if (novelType.length > 0) {
-      params.set("novelType", novelType.map((t) => t.value).join(","));
-    } else {
-      params.delete("novelType");
-    }
-
-    // Update categories
-    if (categories.length > 0) {
-      params.set("categories", categories.map((c) => c.value).join(","));
-    } else {
-      params.delete("categories");
-    }
-
-    // Update search
-    if (search.trim()) {
-      params.set("search", search.trim());
-    } else {
-      params.delete("search");
-    }
-
-    // Reset to page 1 when filters change
+  const applyFilters = () => {
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("search", search.trim());
+    if (selectedStatus.length) params.set("status", selectedStatus.join(","));
+    if (selectedTypes.length) params.set("novelType", selectedTypes.join(","));
+    if (selectedGenres.length) params.set("categories", selectedGenres.join(","));
+    if (selectedSort !== "latest") params.set("sort", selectedSort);
+    if (selectedChapters) params.set("chapters", selectedChapters);
     params.set("page", "1");
-
-    // Update applied filters
-    setAppliedStatus(status);
-    setAppliedNovelType(novelType);
-    setAppliedCategories(categories);
-    setAppliedSearch(search.trim());
-
     router.push(`/series?${params.toString()}`, { scroll: false });
   };
 
-  const activeFiltersCount =
-    appliedStatus.length +
-    appliedNovelType.length +
-    appliedCategories.length +
-    (appliedSearch ? 1 : 0);
+  const clearAll = () => {
+    setSearch("");
+    setSelectedStatus([]);
+    setSelectedTypes([]);
+    setSelectedGenres([]);
+    setSelectedSort("latest");
+    setSelectedChapters("");
+    router.push("/series", { scroll: false });
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    applyFilters();
+  };
+
+  const visibleGenres = showAllGenres ? genreOptions : genreOptions.slice(0, 8);
 
   return (
-    <div className="w-full">
-      <div className="flex items-center gap-3">
-        <Button
-          onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-2 ml-auto px-4 py-2 rounded-lg font-medium transition-all ${
-            isOpen
-              ? "bg-linear-to-r from-secondary/80 to-secondary text-white shadow-lg shadow-primary/20"
-              : "bg-slate-100 text-[#333] hover:bg-slate-200"
-          }`}
-        >
-          <Funnel className="w-4 h-4" />
-          Filters
-          {activeFiltersCount > 0 && (
-            <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold bg-accent text-[#333] rounded-full">
-              {activeFiltersCount}
-            </span>
-          )}
-          <ChevronDown
-            className={`w-4 h-4 ml-auto transition-transform duration-300 ${
-              isOpen ? "rotate-180" : ""
-            }`}
+    <div className="space-y-5">
+      {/* Search + sort row */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <form onSubmit={handleSearchSubmit} className="relative flex-1">
+          <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="search"
+            placeholder="Search by title, genre, or author..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-10 pl-10 pr-4 text-sm rounded-lg bg-card border border-border/40 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
           />
-        </Button>
+        </form>
+
+        {/* Sort dropdown */}
+        <div className="relative">
+          <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          <select
+            value={selectedSort}
+            onChange={(e) => {
+              setSelectedSort(e.target.value);
+              setTimeout(applyFilters, 0);
+            }}
+            className="h-10 pl-9 pr-8 text-sm rounded-lg bg-card border border-border/40 text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            {sortOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div
-        className={`overflow-hidden transition-all duration-300 ease-out origin-top ${
-          isOpen ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
-        }`}
-      >
-        <Card className="border-none bg-transparent shadow-none">
-          <CardContent className="pt-6 ">
-            <div className="grid items-start gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {/* Status */}
-              <div className="space-y-2">
-                <Label className="font-semibold text-gray-300">Status</Label>
-                <MultiSelect
-                  options={statusOptions}
-                  selected={status}
-                  onChange={setStatus}
-                  placeholder="Select status"
-                />
-              </div>
+      {/* Filter chips */}
+      <div className="space-y-4">
+        {/* Status */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Status
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {statusOptions.map((opt) => (
+              <ChipToggle
+                key={opt.value}
+                label={opt.label}
+                active={selectedStatus.includes(opt.value)}
+                onClick={() => {
+                  setSelectedStatus(toggleArrayItem(selectedStatus, opt.value));
+                }}
+              />
+            ))}
+          </div>
+        </div>
 
-              {/* Type */}
-              <div className="space-y-2">
-                <Label className="font-semibold text-gray-300">Type</Label>
-                <MultiSelect
-                  options={novelTypeOptions}
-                  selected={novelType}
-                  onChange={setNovelType}
-                  placeholder="Select type"
-                />
-              </div>
+        {/* Type */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Type
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {novelTypeOptions.map((opt) => (
+              <ChipToggle
+                key={opt.value}
+                label={opt.label}
+                active={selectedTypes.includes(opt.value)}
+                onClick={() => {
+                  setSelectedTypes(toggleArrayItem(selectedTypes, opt.value));
+                }}
+              />
+            ))}
+          </div>
+        </div>
 
-              {/* Genre */}
-              <div className="space-y-2">
-                <Label className="font-semibold text-gray-300">Genre</Label>
-                <MultiSelect
-                  options={categoryOptions}
-                  selected={categories}
-                  onChange={setCategories}
-                  placeholder="Select genre"
-                />
-              </div>
-            </div>
-
-            <div className="w-full max-w-md space-y-2 mt-5">
-              <Label htmlFor={"search"}>Search</Label>
-              <div className="relative">
-                <div className="text-muted-foreground pointer-events-none absolute inset-y-0 left-0 flex items-center justify-center pl-3 peer-disabled:opacity-50">
-                  <SearchIcon className="size-4" />
-                  <span className="sr-only">Search</span>
-                </div>
-                <Input
-                  id="search"
-                  type="search"
-                  placeholder="What do you find interesting?..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="peer px-9 border-none bg-[#27272A] border-gray-200 focus-visible:ring-2 ring-secondary"
-                />
-              </div>
-            </div>
-
-            {/* Apply Filters Button */}
-            <div className="mt-6 flex items-center gap-3">
-              <Button
-                onClick={handleApplyFilters}
-                disabled={!hasUnsavedChanges()}
-                className="flex items-center gap-2 px-6 py-2 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+        {/* Genre */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Genre
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {visibleGenres.map((genre) => (
+              <ChipToggle
+                key={genre}
+                label={genre}
+                active={selectedGenres.includes(genre)}
+                onClick={() => {
+                  setSelectedGenres(toggleArrayItem(selectedGenres, genre));
+                }}
+              />
+            ))}
+            {genreOptions.length > 8 && (
+              <button
+                onClick={() => setShowAllGenres(!showAllGenres)}
+                className="text-xs font-medium text-primary hover:text-primary/80 px-2 py-1.5 transition-colors"
               >
-                <Check className="w-4 h-4" />
-                Apply Filters
-              </Button>
-              {hasUnsavedChanges() && (
-                <span className="text-sm text-muted-foreground">
-                  You have unsaved filter changes
-                </span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                {showAllGenres ? "Show less" : `+${genreOptions.length - 8} more`}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Chapter count */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+            Chapters
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {chapterCountOptions.map((opt) => (
+              <ChipToggle
+                key={opt.value}
+                label={opt.label}
+                active={selectedChapters === opt.value}
+                onClick={() => {
+                  setSelectedChapters(
+                    selectedChapters === opt.value ? "" : opt.value
+                  );
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Action row */}
+      <div className="flex items-center gap-3 pt-1">
+        <button
+          onClick={applyFilters}
+          className="inline-flex items-center gap-2 text-sm font-semibold px-5 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          Apply Filters
+          {activeCount > 0 && (
+            <span className="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold bg-primary-foreground text-primary rounded-full">
+              {activeCount}
+            </span>
+          )}
+        </button>
+
+        {activeCount > 0 && (
+          <button
+            onClick={clearAll}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+            Clear all
+          </button>
+        )}
       </div>
     </div>
   );

@@ -18,6 +18,54 @@ async function getCookieHeader(): Promise<string> {
   return cookiePairs.join("; ");
 }
 
+export async function getNewSeriesAction() {
+  const response = await apiClientManager.getNewSeries();
+
+  if (!response.success) {
+    return {
+      success: false,
+      error: response.error.message,
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: response.data,
+  } as const;
+}
+
+export async function getFeaturedSeriesAction() {
+  const response = await apiClientManager.getFeaturedSeries();
+
+  if (!response.success) {
+    return {
+      success: false,
+      error: response.error.message,
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: response.data,
+  } as const;
+}
+
+export async function getRisingStarsAction() {
+  const response = await apiClientManager.getRisingStars();
+
+  if (!response.success) {
+    return {
+      success: false,
+      error: response.error.message,
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: response.data,
+  } as const;
+}
+
 export async function getAllSeriesAction(
   page?: number,
   limit?: number,
@@ -26,6 +74,8 @@ export async function getAllSeriesAction(
     novelType?: string[];
     categories?: string[];
     search?: string;
+    sort?: string;
+    chapters?: string;
   }
 ) {
   const response = await apiClientManager.getAllSeries(page, limit, filters);
