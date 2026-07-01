@@ -38,6 +38,7 @@ import { InlinePurchaseModal } from "@/components/shared/inline-purchase-modal";
 import { CoinValueBadge } from "@/components/shared/coin-value-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import MagicRenderer from "./global/magic-tags/renderer";
 
 type ReadingTheme = "light" | "sepia" | "dark" | "midnight";
 
@@ -680,7 +681,18 @@ export default function ChapterReaderPage({
             style={{ fontSize: `${fontSize}px`, lineHeight }}
           >
             {chapter.content ? (
-              <div dangerouslySetInnerHTML={{ __html: chapter.content }} />
+              <MagicRenderer
+                content={chapter.content}
+                readingTheme={
+                  readingTheme === "light"
+                    ? "light"
+                    : readingTheme === "sepia"
+                    ? "light-gray"
+                    : readingTheme === "dark"
+                    ? "dark-gray"
+                    : "dark"
+                }
+              />
             ) : (
               <p className="text-muted-foreground">No content available.</p>
             )}
