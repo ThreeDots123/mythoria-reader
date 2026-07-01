@@ -609,7 +609,9 @@ export default function ChapterReaderPage({
           ref={chapterHeadingRef}
           className={cn(
             "pt-10 pb-8 border-b mb-10 transition-colors duration-300",
-            f ? "border-white/10" : "border-border/20"
+            f
+              ? "border-white/10 bg-black/60 backdrop-blur-xl -mx-6 px-6 rounded-b-lg"
+              : "border-border/20"
           )}
         >
           <h1
@@ -808,7 +810,12 @@ export default function ChapterReaderPage({
 
       {/* Comments — hidden in fullscreen */}
       {!isPremiumLocked && chapter.id && (
-        <div className={cn("max-w-3xl mx-auto px-6 py-10 border-t border-border/20", f ? "hidden" : "block")}>
+        <div
+          className={cn(
+            "max-w-3xl mx-auto px-6 py-10 border-t border-border/20",
+            f ? "hidden" : "block"
+          )}
+        >
           <CommentSection chapterId={chapter.id} />
         </div>
       )}
