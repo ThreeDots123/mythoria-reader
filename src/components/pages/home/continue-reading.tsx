@@ -166,7 +166,8 @@ export default function ContinueReading() {
                     (item.lastChapterNumber / item.totalChapters) * 100
                   )
                 : 0;
-            const nextChapter = item.lastChapterNumber + 1;
+            // const nextChapter = item.lastChapterNumber + 1;
+            const currentChapter = item.lastChapterNumber;
             const status = statusStyles[item.status] ?? {
               label: item.status,
               className: "bg-muted text-muted-foreground",
@@ -175,7 +176,7 @@ export default function ContinueReading() {
             return (
               <Link
                 key={item.seriesId}
-                href={`/series/${item.slug}/chapter/${nextChapter}`}
+                href={`/series/${item.slug}/chapter/${currentChapter}`}
                 className="group flex-none w-[260px] sm:w-[280px] pr-4"
               >
                 <div className="flex gap-3 p-3 rounded-xl border border-border/30 bg-surface-elevated hover:border-primary/30 transition-colors">
