@@ -42,6 +42,7 @@ import {
   forgotPasswordRoute,
   resetPasswordRoute,
   validateResetTokenRoute,
+  freeChaptersRoute,
 } from "@/routes/server";
 import {
   NewSeriesResponse,
@@ -900,6 +901,13 @@ class ApiClient {
     >({
       method: "GET",
       endpoint: "/announcement/public/active",
+    });
+  }
+
+  async getFreeChapters() {
+    return this.execute({
+      method: "GET",
+      endpoint: freeChaptersRoute,
     });
   }
 }

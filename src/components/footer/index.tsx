@@ -25,7 +25,7 @@ const communityLinks = [
   },
   {
     title: "Contact Us",
-    href: "mailto:mythoriatales@yahoo.com",
+    href: "mailto:mythoriatales@outlook.com",
     external: true,
   },
 ];

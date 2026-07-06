@@ -200,10 +200,10 @@ export default function PrivacyPolicyPage() {
             <p className="text-muted-foreground leading-relaxed mt-4">
               To exercise any of these rights, please contact us at:{" "}
               <a
-                href="mailto:mythoriatales@yahoo.com"
+                href="mailto:mythoriatales@outlook.com"
                 className="text-primary hover:underline"
               >
-                mythoriatales@yahoo.com
+                mythoriatales@outlook.com
               </a>
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
