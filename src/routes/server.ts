@@ -1,4 +1,5 @@
-export const recentlyReleasedChaptersRoute = "/chapter/public/recently-released";
+export const recentlyReleasedChaptersRoute =
+  "/chapter/public/recently-released";
 export const newSeriesRoute = "/series/public/new";
 export const latestUpdatesRoute = "/chapter/public/latest-updates";
 export const latestChaptersRoute = "/chapter/public/latest";
@@ -57,3 +58,4 @@ export const readerGoogleAuthenticateRoute =
 export const forgotPasswordRoute = "/account/forgot-password";
 export const resetPasswordRoute = "/account/reset-password";
 export const validateResetTokenRoute = "/account/validate-reset-token";
+export const freeChaptersRoute = "/chapter/public/free";

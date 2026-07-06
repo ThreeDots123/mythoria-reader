@@ -142,10 +142,10 @@ export default function DMCAPage() {
             <p className="text-muted-foreground leading-relaxed mt-4">
               To submit a DMCA takedown request, please contact us at:{" "}
               <a
-                href="mailto:mythoriatales@yahoo.com"
+                href="mailto:mythoriatales@outlook.com"
                 className="text-primary hover:underline"
               >
-                mythoriatales@yahoo.com
+                mythoriatales@outlook.com
               </a>
             </p>
           </section>
@@ -208,10 +208,10 @@ export default function DMCAPage() {
             <p className="text-muted-foreground leading-relaxed">
               For questions or concerns regarding these Terms, please contact:{" "}
               <a
-                href="mailto:mythoriatales@yahoo.com"
+                href="mailto:mythoriatales@outlook.com"
                 className="text-primary hover:underline"
               >
-                mythoriatales@yahoo.com
+                mythoriatales@outlook.com
               </a>
             </p>
           </section>

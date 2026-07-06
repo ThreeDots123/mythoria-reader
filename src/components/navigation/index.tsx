@@ -101,7 +101,7 @@ export default function Navigation() {
     },
     {
       title: "Contact",
-      href: "mailto:mythoriatales@yahoo.com",
+      href: "mailto:mythoriatales@outlook.com",
       icon: Mail,
       external: true,
     },
