@@ -34,6 +34,22 @@ export async function getRecentlyReleasedChaptersAction() {
   } as const;
 }
 
+export async function getFreeChapters() {
+  const response = await apiClientManager.getFreeChapters();
+
+  if (!response.success) {
+    return {
+      success: false,
+      error: response.error.message,
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: response.data,
+  } as const;
+}
+
 export async function getLatestChaptersAction(limit?: number) {
   const response = await apiClientManager.getLatestChapters(limit);
 

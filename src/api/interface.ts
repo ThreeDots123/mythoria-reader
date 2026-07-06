@@ -905,7 +905,7 @@ class ApiClient {
   }
 
   async getFreeChapters() {
-    return this.execute({
+    return this.execute<LatestChapterResponse[]>({
       method: "GET",
       endpoint: freeChaptersRoute,
     });

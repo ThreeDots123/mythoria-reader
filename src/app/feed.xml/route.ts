@@ -1,5 +1,5 @@
 import RSS from "rss";
-import { getLatestChaptersAction } from "@/server-actions/chapter";
+import { getFreeChapters } from "@/server-actions/chapter";
 
 const siteUrl = "https://www.mythoriatales.com";
 
@@ -15,7 +15,7 @@ export async function GET() {
     pubDate: new Date(),
   });
 
-  const result = await getLatestChaptersAction();
+  const result = await getFreeChapters();
 
   if (result.success) {
     for (const chapter of result.data) {
