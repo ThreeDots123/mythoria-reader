@@ -60,7 +60,8 @@ export function ChaptersSection({
               const value = e.target.value;
               if (
                 value === "" ||
-                (parseInt(value, 10) >= 1 && parseInt(value, 10) <= totalChapters)
+                (parseInt(value, 10) >= 1 &&
+                  parseInt(value, 10) <= totalChapters)
               ) {
                 onChapterNumberChange(value);
               }
@@ -92,7 +93,7 @@ export function ChaptersSection({
                 "group flex items-center justify-between px-4 py-3 rounded-lg transition-colors",
                 chapter.isPremium
                   ? "bg-card/30 hover:bg-card/50 border border-border/10"
-                  : "hover:bg-card/40",
+                  : "hover:bg-card/40"
               )}
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -106,7 +107,8 @@ export function ChaptersSection({
                     Chapter {chapter.chapterNumber}
                     {chapter.title && (
                       <span className="text-muted-foreground font-normal">
-                        {" "}&mdash; {chapter.title}
+                        {" "}
+                        &mdash; {chapter.title}
                       </span>
                     )}
                   </p>
@@ -116,7 +118,7 @@ export function ChaptersSection({
                 </div>
               </div>
 
-              {chapter.isPremium && (
+              {/* {chapter.isPremium && (
                 <div className="flex items-center gap-2.5 shrink-0 ml-3">
                   <UnlockCountdownTimer
                     publishDate={chapter.publishDate}
@@ -127,7 +129,7 @@ export function ChaptersSection({
                     size="sm"
                   />
                 </div>
-              )}
+              )} */}
             </div>
           </Link>
         ))}
