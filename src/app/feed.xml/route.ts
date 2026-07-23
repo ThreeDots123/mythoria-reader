@@ -20,7 +20,7 @@ export async function GET() {
   if (result.success) {
     for (const chapter of result.data) {
       feed.item({
-        title: `${chapter.series.title} - ${chapter.title}`,
+        title: `${chapter.series.title} - Chapter ${chapter.chapterNumber}`,
         description: chapter.contentPreview,
         url: `${siteUrl}/series/${chapter.series.slug}/chapter/${chapter.chapterNumber}`,
         guid: chapter.id,
