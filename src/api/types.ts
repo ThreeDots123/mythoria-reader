@@ -337,3 +337,23 @@ export interface CoinPurchaseResponse {
   status: "pending" | "completed" | "failed" | "cancelled";
   purchaseDate: string;
 }
+
+export interface CryptoCurrencyResponse {
+  name: string;
+  logo: string;
+  network: string;
+}
+
+export interface CryptoMinimumAmountResponse {
+  currency_from: string;
+  currency_to: string;
+  min_amount: number;
+  fiat_equivalent: number;
+}
+
+export interface CryptoEstimateResponse {
+  currency_from: string;
+  amount_from: number;
+  currency_to: string;
+  estimated_amount: string;
+}

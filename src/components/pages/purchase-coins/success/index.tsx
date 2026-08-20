@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { verifyPaymentAction } from "@/server-actions/payment";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ export default function PurchaseSuccessComponent() {
   const { refreshUser } = useAuth();
   const [verifying, setVerifying] = useState(true);
   const [verified, setVerified] = useState(false);
+  const verifiedTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
     const orderId = searchParams.get("token");
@@ -21,6 +22,11 @@ export default function PurchaseSuccessComponent() {
       router.push("/purchase");
       return;
     }
+
+    // PayPal allows a single capture per order, so a re-run of this effect must
+    // never fire a second verification for the same token.
+    if (verifiedTokenRef.current === orderId) return;
+    verifiedTokenRef.current = orderId;
 
     const verifyPayment = async () => {
       try {
@@ -40,31 +46,29 @@ export default function PurchaseSuccessComponent() {
         }
 
         if (result.data?.success) {
-          if (!verified) {
-            setVerified(true);
+          setVerified(true);
 
-            toast.success(
-              `Payment successful! You received ${result.data.coinPurchase.coinAmount.toLocaleString()} coins.`,
-              {
-                style: {
-                  "--normal-bg":
-                    "color-mix(in oklab, light-dark(var(--color-green-600), var(--color-green-400)) 10%, var(--background))",
-                  "--normal-text":
-                    "light-dark(var(--color-green-600), var(--color-green-400))",
-                  "--normal-border":
-                    "light-dark(var(--color-green-600), var(--color-green-400))",
-                } as React.CSSProperties,
-              }
-            );
+          toast.success(
+            `Payment successful! You received ${result.data.coinPurchase.coinAmount.toLocaleString()} coins.`,
+            {
+              style: {
+                "--normal-bg":
+                  "color-mix(in oklab, light-dark(var(--color-green-600), var(--color-green-400)) 10%, var(--background))",
+                "--normal-text":
+                  "light-dark(var(--color-green-600), var(--color-green-400))",
+                "--normal-border":
+                  "light-dark(var(--color-green-600), var(--color-green-400))",
+              } as React.CSSProperties,
+            }
+          );
 
-            // Refresh user data to update coin balance
-            await refreshUser();
+          // Refresh user data to update coin balance
+          await refreshUser();
 
-            // Redirect to purchase page after 3 seconds
-            setTimeout(() => {
-              router.push("/purchase");
-            }, 3000);
-          }
+          // Redirect to purchase page after 3 seconds
+          setTimeout(() => {
+            router.push("/purchase");
+          }, 3000);
         } else {
           toast.error("Payment verification failed", {
             style: {

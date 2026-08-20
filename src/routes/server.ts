@@ -38,6 +38,11 @@ export const verifyPaymentRoute = "/payment/coins/verify";
 export const getUserCoinPurchasesRoute = "/payment/coins/purchases";
 export const getCoinPurchaseRoute = (purchaseId: string) =>
   `/payment/coins/purchase/${purchaseId}`;
+export const getCryptoCurrenciesRoute = "/payment/crypto/currencies";
+export const getCryptoMinimumAmountRoute = (currency: string) =>
+  `/payment/crypto/minimum/amount/${currency}`;
+export const getCryptoEstimateRoute = (currency: string) =>
+  `/payment/crypto/estimate/${currency}`;
 export const createCommentRoute = "/comment";
 export const getSeriesCommentsRoute = (seriesId: string) =>
   `/comment/series/${seriesId}`;

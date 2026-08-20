@@ -30,6 +30,9 @@ import {
   verifyPaymentRoute,
   getUserCoinPurchasesRoute,
   getCoinPurchaseRoute,
+  getCryptoCurrenciesRoute,
+  getCryptoMinimumAmountRoute,
+  getCryptoEstimateRoute,
   createCommentRoute,
   getSeriesCommentsRoute,
   getChapterCommentsRoute,
@@ -65,6 +68,9 @@ import {
   CreateCoinPurchaseOrderResponse,
   VerifyPaymentResponse,
   CoinPurchaseResponse,
+  CryptoCurrencyResponse,
+  CryptoMinimumAmountResponse,
+  CryptoEstimateResponse,
   LikeResponse,
   LikeCheckResponse,
   LastReadChapterResponse,
@@ -776,6 +782,40 @@ class ApiClient {
       method: "GET",
       endpoint: getCoinPurchaseRoute(purchaseId),
       headers: cookieHeader ? { Cookie: cookieHeader } : undefined,
+    });
+  }
+
+  /**
+   * Get the crypto currencies available for payment
+   */
+  async getCryptoCurrencies() {
+    return this.execute<CryptoCurrencyResponse[]>({
+      method: "GET",
+      endpoint: getCryptoCurrenciesRoute,
+    });
+  }
+
+  /**
+   * Get the minimum payment amount for a crypto currency
+   * @param currency - Payment currency ticker (e.g. "btc", "usdttrc20")
+   */
+  async getCryptoMinimumAmount(currency: string) {
+    return this.execute<CryptoMinimumAmountResponse>({
+      method: "GET",
+      endpoint: getCryptoMinimumAmountRoute(currency),
+    });
+  }
+
+  /**
+   * Get the estimated crypto price for a fiat amount
+   * @param currency - Payment currency ticker (e.g. "btc", "usdttrc20")
+   * @param amount - Amount to convert
+   */
+  async getCryptoEstimate(currency: string, amount: number) {
+    return this.execute<CryptoEstimateResponse>({
+      method: "GET",
+      endpoint: getCryptoEstimateRoute(currency),
+      params: { amount },
     });
   }
 

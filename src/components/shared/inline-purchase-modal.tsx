@@ -110,10 +110,7 @@ export function InlinePurchaseModal({
       }
 
       if (result.data?.approvalUrl) {
-        window.open(
-          result.data.approvalUrl + `?orderId=${result.data.orderId}`,
-          "_blank",
-        );
+        window.open(result.data.approvalUrl, "_blank");
         toast.info("Complete your payment in the new tab, then return here.", {
           duration: 10000,
         });

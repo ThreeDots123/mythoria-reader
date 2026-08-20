@@ -1,12 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { createCoinPurchaseOrderAction } from "@/server-actions/payment";
+import {
+  createCoinPurchaseOrderAction,
+  getCryptoCurrenciesAction,
+  getCryptoMinimumAmountAction,
+  getCryptoEstimateAction,
+} from "@/server-actions/payment";
+import {
+  CryptoCurrencyResponse,
+  CryptoEstimateResponse,
+  CryptoMinimumAmountResponse,
+} from "@/api/types";
 import { toast } from "sonner";
 import { PiCoinsThin } from "react-icons/pi";
 import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Lock,
@@ -18,6 +29,10 @@ import {
   Sparkles,
   X,
   ChevronRight,
+  ChevronLeft,
+  Search,
+  AlertCircle,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -125,18 +140,120 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
   );
 }
 
+// NOWPayments returns logos as paths relative to their site (e.g. "/images/coins/btc.svg")
+const NOWPAYMENTS_ORIGIN = "https://nowpayments.io";
+
+function resolveLogoUrl(logo: string) {
+  if (!logo) return null;
+  if (logo.startsWith("http://") || logo.startsWith("https://")) return logo;
+  return `${NOWPAYMENTS_ORIGIN}${logo.startsWith("/") ? "" : "/"}${logo}`;
+}
+
+function CurrencyIcon({ name, logo }: { name: string; logo: string }) {
+  const [failed, setFailed] = useState(false);
+  const src = resolveLogoUrl(logo);
+
+  if (!src || failed) {
+    return (
+      <div className="w-8 h-8 rounded-full bg-muted/20 border border-border/30 flex items-center justify-center shrink-0">
+        <span className="text-[10px] font-bold text-muted-foreground uppercase">
+          {name.slice(0, 3)}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="w-8 h-8 rounded-full object-contain shrink-0"
+    />
+  );
+}
+
+/**
+ * The estimate endpoint reports both sides of the pair, so read the amount off
+ * whichever side is the currency the reader picked rather than assuming a
+ * direction.
+ */
+function readEstimatedCryptoAmount(
+  estimate: CryptoEstimateResponse,
+  currencyName: string
+) {
+  const ticker = currencyName.toLowerCase();
+  if (estimate.currency_to?.toLowerCase() === ticker) {
+    return Number(estimate.estimated_amount);
+  }
+  if (estimate.currency_from?.toLowerCase() === ticker) {
+    return Number(estimate.amount_from);
+  }
+  return Number(estimate.estimated_amount);
+}
+
+function formatCryptoAmount(amount: number) {
+  if (!Number.isFinite(amount)) return "—";
+  const decimals = amount >= 1 ? 4 : amount >= 0.0001 ? 6 : 8;
+  const fixed = amount.toFixed(decimals);
+  return fixed.includes(".")
+    ? fixed.replace(/0+$/, "").replace(/\.$/, "")
+    : fixed;
+}
+
+function formatUsd(amount: number) {
+  if (!Number.isFinite(amount)) return null;
+  return `$${amount.toFixed(2)}`;
+}
+
 type Plan = (typeof coinPlans)[number];
+type SheetStep = "method" | "crypto" | "review";
+type CryptoQuote = {
+  minimum: CryptoMinimumAmountResponse;
+  estimate: CryptoEstimateResponse;
+};
 
 export default function PurchaseCoinsComponent() {
   const router = useRouter();
   const { isAuthenticated, user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loadingMethod, setLoadingMethod] = useState<
-    "paypal" | "crypto" | null
+    "paypal" | "now-payments" | null
   >(null);
+  const [step, setStep] = useState<SheetStep>("method");
+  const [currencies, setCurrencies] = useState<CryptoCurrencyResponse[]>([]);
+  const [currenciesLoading, setCurrenciesLoading] = useState(false);
+  const [currenciesError, setCurrenciesError] = useState<string | null>(null);
+  const [currencyQuery, setCurrencyQuery] = useState("");
+  const [selectedCurrency, setSelectedCurrency] =
+    useState<CryptoCurrencyResponse | null>(null);
+  const [quote, setQuote] = useState<CryptoQuote | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
 
   const balance = user?.coinBalance ?? 0;
   const chaptersWorth = Math.floor(balance / COINS_PER_CHAPTER);
+
+  const payAmount =
+    quote && selectedCurrency
+      ? readEstimatedCryptoAmount(quote.estimate, selectedCurrency.name)
+      : NaN;
+  const minAmount = quote ? Number(quote.minimum.min_amount) : NaN;
+  const quoteUsable =
+    !!quote && Number.isFinite(payAmount) && Number.isFinite(minAmount);
+  const belowMinimum = quoteUsable && payAmount < minAmount;
+
+  const filteredCurrencies = useMemo(() => {
+    const query = currencyQuery.trim().toLowerCase();
+    if (!query) return currencies;
+    return currencies.filter(
+      (currency) =>
+        currency.name.toLowerCase().includes(query) ||
+        currency.network?.toLowerCase().includes(query)
+    );
+  }, [currencies, currencyQuery]);
 
   const openSheet = (plan: Plan) => {
     if (!isAuthenticated) {
@@ -145,11 +262,28 @@ export default function PurchaseCoinsComponent() {
       return;
     }
     setSelectedPlan(plan);
+    setStep("method");
   };
 
   const closeSheet = () => {
     if (loadingMethod) return;
     setSelectedPlan(null);
+    setStep("method");
+    setSelectedCurrency(null);
+    setCurrencyQuery("");
+    setQuote(null);
+    setQuoteError(null);
+  };
+
+  const goBack = () => {
+    if (loadingMethod) return;
+    if (step === "review") {
+      setStep("crypto");
+      setQuote(null);
+      setQuoteError(null);
+      return;
+    }
+    setStep("method");
   };
 
   const handlePayPal = async () => {
@@ -165,8 +299,9 @@ export default function PurchaseCoinsComponent() {
         return;
       }
       if (result.data?.approvalUrl) {
-        window.location.href =
-          result.data.approvalUrl + `?orderId=${result.data.orderId}`;
+        // Navigate to PayPal's approval link as-is — it already carries the
+        // order token, and PayPal appends it back to our return_url on success.
+        window.location.href = result.data.approvalUrl;
       } else {
         toast.error("Failed to get payment URL");
       }
@@ -177,9 +312,77 @@ export default function PurchaseCoinsComponent() {
     }
   };
 
+  const loadCurrencies = async () => {
+    setCurrenciesLoading(true);
+    setCurrenciesError(null);
+    try {
+      const result = await getCryptoCurrenciesAction();
+      if (!result.success) {
+        setCurrenciesError(result.error || "Failed to load payment currencies");
+        return;
+      }
+      setCurrencies(result.data ?? []);
+    } catch (error: any) {
+      setCurrenciesError(error.message || "Failed to load payment currencies");
+    } finally {
+      setCurrenciesLoading(false);
+    }
+  };
+
   const handleCrypto = async () => {
-    // TODO: implement when endpoint is ready
-    toast.info("Crypto payments coming soon");
+    return;
+    if (!selectedPlan) return;
+    setStep("crypto");
+    // Currencies rarely change — fetch once per page visit
+    if (currencies.length > 0) return;
+    await loadCurrencies();
+  };
+
+  const loadQuote = async (currency: CryptoCurrencyResponse, plan: Plan) => {
+    setQuoteLoading(true);
+    setQuoteError(null);
+    setQuote(null);
+    try {
+      const [minimumResult, estimateResult] = await Promise.all([
+        getCryptoMinimumAmountAction(currency.name),
+        getCryptoEstimateAction(currency.name, plan.price),
+      ]);
+
+      if (!minimumResult.success) {
+        setQuoteError(minimumResult.error || "Failed to load payment details");
+        return;
+      }
+      if (!estimateResult.success) {
+        setQuoteError(estimateResult.error || "Failed to load payment details");
+        return;
+      }
+
+      setQuote({
+        minimum: minimumResult.data,
+        estimate: estimateResult.data,
+      });
+    } catch (error: any) {
+      setQuoteError(error.message || "Failed to load payment details");
+    } finally {
+      setQuoteLoading(false);
+    }
+  };
+
+  const handleCurrencyContinue = async () => {
+    if (!selectedPlan || !selectedCurrency) return;
+    setStep("review");
+    await loadQuote(selectedCurrency, selectedPlan);
+  };
+
+  const refreshQuote = async () => {
+    if (!selectedPlan || !selectedCurrency) return;
+    await loadQuote(selectedCurrency, selectedPlan);
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!selectedPlan || !selectedCurrency || !quote || belowMinimum) return;
+    // TODO: next step — create the payment and show the deposit address
+    toast.info("Creating the payment comes next");
   };
 
   return (
@@ -413,21 +616,37 @@ export default function PurchaseCoinsComponent() {
 
                 {/* Header */}
                 <div className="flex items-start justify-between px-6 pt-4 pb-5">
-                  <div>
-                    <h3 className="text-base font-bold text-foreground">
-                      Choose payment method
-                    </h3>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <PiCoinsThin className="w-4 h-4 text-coin-gold" />
-                      <span className="text-sm font-semibold text-coin-gold">
-                        {selectedPlan.amount.toLocaleString()} coins
-                      </span>
-                      <span className="text-muted-foreground/40 text-sm">
-                        ·
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        ${selectedPlan.price}
-                      </span>
+                  <div className="flex items-start gap-2 min-w-0">
+                    {step !== "method" && (
+                      <button
+                        onClick={goBack}
+                        disabled={!!loadingMethod}
+                        aria-label="Go back"
+                        className="p-1.5 -ml-1.5 mt-0.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/20 transition-colors disabled:opacity-40"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                    )}
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-foreground">
+                        {step === "method"
+                          ? "Choose payment method"
+                          : step === "crypto"
+                          ? "Select payment currency"
+                          : "Review payment"}
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <PiCoinsThin className="w-4 h-4 text-coin-gold" />
+                        <span className="text-sm font-semibold text-coin-gold">
+                          {selectedPlan.amount.toLocaleString()} coins
+                        </span>
+                        <span className="text-muted-foreground/40 text-sm">
+                          ·
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          ${selectedPlan.price}
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <button
@@ -440,83 +659,407 @@ export default function PurchaseCoinsComponent() {
                 </div>
 
                 {/* Methods */}
-                <div className="px-6 pb-6 space-y-3">
-                  {/* PayPal */}
-                  <button
-                    onClick={handlePayPal}
-                    disabled={!!loadingMethod}
-                    className={cn(
-                      "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
-                      "border-border/30 bg-card hover:border-primary/40 hover:bg-primary/5",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-[#003087]/10 border border-[#003087]/20 flex items-center justify-center shrink-0">
-                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-                        <path
-                          d="M19.5 8.5c.3-2-1.2-3.5-3.8-3.5H9.3c-.3 0-.5.2-.6.5L6.2 17c0 .2.1.4.4.4h2.9l.7-4.6v.2c.1-.3.3-.5.6-.5h1.3c2.5 0 4.4-1 5-4 .2-1.1.1-1.9-.4-2.5z"
-                          fill="#009CDE"
-                        />
-                        <path
-                          d="M19.9 11c-.6 3-2.5 4-5 4h-1.3c-.3 0-.5.2-.6.5L12 20h-2.5l-.4 2.4c0 .2.1.3.3.3h2.4c.3 0 .5-.2.5-.4l.6-4h1.3c2.5 0 4.4-1 5-4 .2-1.1.1-2.1-.3-2.3z"
-                          fill="#012169"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-foreground">
-                        PayPal
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Pay securely with your PayPal account
-                      </p>
-                    </div>
-                    {loadingMethod === "paypal" ? (
-                      <Spinner className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </button>
-
-                  {/* Cryptomus */}
-                  <button
-                    onClick={handleCrypto}
-                    disabled={!!loadingMethod}
-                    className={cn(
-                      "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
-                      "border-border/30 bg-card hover:border-primary/40 hover:bg-primary/5",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                      <svg
-                        viewBox="0 0 32 36"
-                        className="w-4.5 h-4.5 text-emerald-400"
-                        fill="currentColor"
-                      >
-                        <path d="M30.611 8.507 16.935.61a2.01 2.01 0 0 0-2.005 0L1.254 8.507A2.01 2.01 0 0 0 .25 10.245v15.791c0 .713.384 1.378 1.004 1.738L14.93 35.67a2.034 2.034 0 0 0 2.008 0l13.677-7.896a2.01 2.01 0 0 0 1.004-1.738V10.245c0-.713-.385-1.378-1.004-1.738zM16.242 17.16a.62.62 0 0 1-.62 0L2.328 9.487l13.296-7.675a.64.64 0 0 1 .62 0l13.295 7.675zm-1.312 1.197q.146.084.312.142v15.743l-13.296-7.67a.62.62 0 0 1-.311-.537V10.684z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-foreground">
-                          Cryptomus
-                        </p>
-                        <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">
-                          Coming soon
-                        </span>
+                {step === "method" ? (
+                  <div className="px-6 pb-6 space-y-3">
+                    {/* PayPal */}
+                    <button
+                      onClick={handlePayPal}
+                      disabled={!!loadingMethod}
+                      className={cn(
+                        "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
+                        "border-border/30 bg-card hover:border-primary/40 hover:bg-primary/5",
+                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                      )}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-[#003087]/10 border border-[#003087]/20 flex items-center justify-center shrink-0">
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="w-5 h-5"
+                          fill="none"
+                        >
+                          <path
+                            d="M19.5 8.5c.3-2-1.2-3.5-3.8-3.5H9.3c-.3 0-.5.2-.6.5L6.2 17c0 .2.1.4.4.4h2.9l.7-4.6v.2c.1-.3.3-.5.6-.5h1.3c2.5 0 4.4-1 5-4 .2-1.1.1-1.9-.4-2.5z"
+                            fill="#009CDE"
+                          />
+                          <path
+                            d="M19.9 11c-.6 3-2.5 4-5 4h-1.3c-.3 0-.5.2-.6.5L12 20h-2.5l-.4 2.4c0 .2.1.3.3.3h2.4c.3 0 .5-.2.5-.4l.6-4h1.3c2.5 0 4.4-1 5-4 .2-1.1.1-2.1-.3-2.3z"
+                            fill="#012169"
+                          />
+                        </svg>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        Pay with Bitcoin, USDT and more
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-foreground">
+                          PayPal
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Pay securely with your PayPal account
+                        </p>
+                      </div>
+                      {loadingMethod === "paypal" ? (
+                        <Spinner className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+
+                    {/* NOWPayments */}
+                    <button
+                      onClick={handleCrypto}
+                      disabled={!!loadingMethod}
+                      className={cn(
+                        "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
+                        "border-border/30 bg-card hover:border-primary/40 hover:bg-primary/5",
+                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                      )}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                        <svg
+                          viewBox="0 0 32 36"
+                          className="w-4.5 h-4.5 text-emerald-400"
+                          fill="currentColor"
+                        >
+                          <path d="M30.611 8.507 16.935.61a2.01 2.01 0 0 0-2.005 0L1.254 8.507A2.01 2.01 0 0 0 .25 10.245v15.791c0 .713.384 1.378 1.004 1.738L14.93 35.67a2.034 2.034 0 0 0 2.008 0l13.677-7.896a2.01 2.01 0 0 0 1.004-1.738V10.245c0-.713-.385-1.378-1.004-1.738zM16.242 17.16a.62.62 0 0 1-.62 0L2.328 9.487l13.296-7.675a.64.64 0 0 1 .62 0l13.295 7.675zm-1.312 1.197q.146.084.312.142v15.743l-13.296-7.67a.62.62 0 0 1-.311-.537V10.684z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground">
+                            NOWPayments (Coming Soon)
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Pay with Bitcoin, USDT and more
+                        </p>
+                      </div>
+                      {loadingMethod === "now-payments" ? (
+                        <Spinner className="w-4 h-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  </div>
+                ) : step === "crypto" ? (
+                  /* Crypto currency picker */
+                  <div className="pb-6">
+                    {/* Search */}
+                    {!currenciesLoading &&
+                      !currenciesError &&
+                      currencies.length > 0 && (
+                        <div className="px-6 pb-3">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <input
+                              value={currencyQuery}
+                              onChange={(e) => setCurrencyQuery(e.target.value)}
+                              placeholder="Search coin or network"
+                              className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl bg-muted/10 border border-border/30 text-foreground placeholder:text-muted-foreground outline-none transition-colors focus:border-primary/40 focus:bg-card"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                    {/* List */}
+                    <div className="px-6 max-h-[45vh] md:max-h-72 overflow-y-auto space-y-2">
+                      {currenciesLoading &&
+                        Array.from({ length: 5 }).map((_, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center gap-3 p-3 rounded-xl border border-border/20"
+                          >
+                            <Skeleton className="w-8 h-8 rounded-full" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-3 w-20" />
+                              <Skeleton className="h-2.5 w-12" />
+                            </div>
+                          </div>
+                        ))}
+
+                      {!currenciesLoading && currenciesError && (
+                        <div className="flex flex-col items-center text-center py-8 px-4">
+                          <AlertCircle className="w-6 h-6 text-destructive mb-2" />
+                          <p className="text-sm text-foreground font-medium">
+                            Couldn&apos;t load currencies
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {currenciesError}
+                          </p>
+                          <button
+                            onClick={loadCurrencies}
+                            className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-primary hover:underline"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
+                            Try again
+                          </button>
+                        </div>
+                      )}
+
+                      {!currenciesLoading &&
+                        !currenciesError &&
+                        filteredCurrencies.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            {currencies.length === 0
+                              ? "No payment currencies are available right now."
+                              : `No currency matches "${currencyQuery}"`}
+                          </p>
+                        )}
+
+                      {!currenciesLoading &&
+                        !currenciesError &&
+                        filteredCurrencies.map((currency) => {
+                          const isSelected =
+                            selectedCurrency?.name === currency.name &&
+                            selectedCurrency?.network === currency.network;
+                          return (
+                            <button
+                              key={`${currency.name}-${currency.network}`}
+                              onClick={() => setSelectedCurrency(currency)}
+                              disabled={!!loadingMethod}
+                              className={cn(
+                                "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
+                                "disabled:opacity-50 disabled:cursor-not-allowed",
+                                isSelected
+                                  ? "border-primary/50 bg-primary/5"
+                                  : "border-border/30 bg-card hover:border-border/60 hover:bg-muted/10"
+                              )}
+                            >
+                              <CurrencyIcon
+                                name={currency.name}
+                                logo={currency.logo}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground uppercase truncate">
+                                  {currency.name}
+                                </p>
+                                {currency.network && (
+                                  <p className="text-xs text-muted-foreground uppercase truncate">
+                                    {currency.network}
+                                  </p>
+                                )}
+                              </div>
+                              {isSelected && (
+                                <Check className="w-4 h-4 text-primary shrink-0" />
+                              )}
+                            </button>
+                          );
+                        })}
+                    </div>
+
+                    {/* Continue */}
+                    <div className="px-6 pt-4">
+                      <button
+                        onClick={handleCurrencyContinue}
+                        disabled={!selectedCurrency || !!loadingMethod}
+                        className={cn(
+                          "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors",
+                          "bg-primary text-primary-foreground hover:bg-primary/90",
+                          "disabled:opacity-40 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        {loadingMethod === "now-payments" ? (
+                          <Spinner className="w-4 h-4" />
+                        ) : (
+                          <>
+                            Continue
+                            {selectedCurrency
+                              ? ` with ${selectedCurrency.name.toUpperCase()}`
+                              : ""}
+                            <ChevronRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                      <p className="text-center text-[11px] text-muted-foreground mt-3">
+                        Rates and the exact amount to send are confirmed on the
+                        next step.
                       </p>
                     </div>
-                    {loadingMethod === "crypto" ? (
-                      <Spinner className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                ) : (
+                  /* Review — minimum amount + estimated price */
+                  <div className="px-6 pb-6">
+                    {quoteLoading && (
+                      <div className="space-y-3">
+                        <div className="rounded-xl border border-border/20 p-4 space-y-4">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="w-8 h-8 rounded-full" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-2.5 w-14" />
+                              <Skeleton className="h-5 w-32" />
+                            </div>
+                          </div>
+                          <div className="space-y-2 border-t border-border/20 pt-3">
+                            <Skeleton className="h-3 w-full" />
+                            <Skeleton className="h-3 w-4/5" />
+                            <Skeleton className="h-3 w-3/5" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-11 w-full rounded-xl" />
+                      </div>
                     )}
-                  </button>
-                </div>
+
+                    {!quoteLoading && quoteError && (
+                      <div className="flex flex-col items-center text-center py-8">
+                        <AlertCircle className="w-6 h-6 text-destructive mb-2" />
+                        <p className="text-sm text-foreground font-medium">
+                          Couldn&apos;t load payment details
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {quoteError}
+                        </p>
+                        <button
+                          onClick={refreshQuote}
+                          className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-primary hover:underline"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          Try again
+                        </button>
+                      </div>
+                    )}
+
+                    {!quoteLoading &&
+                      !quoteError &&
+                      quote &&
+                      selectedCurrency && (
+                        <>
+                          <div className="rounded-xl border border-border/30 bg-muted/5 p-4">
+                            <div className="flex items-center gap-3">
+                              <CurrencyIcon
+                                name={selectedCurrency.name}
+                                logo={selectedCurrency.logo}
+                              />
+                              <div className="min-w-0">
+                                <p className="text-xs text-muted-foreground">
+                                  You send
+                                </p>
+                                <p className="text-xl font-bold text-foreground truncate">
+                                  {formatCryptoAmount(payAmount)}{" "}
+                                  <span className="uppercase">
+                                    {selectedCurrency.name}
+                                  </span>
+                                </p>
+                              </div>
+                            </div>
+
+                            <dl className="mt-4 space-y-2 border-t border-border/20 pt-3 text-xs">
+                              <div className="flex items-center justify-between gap-3">
+                                <dt className="text-muted-foreground">
+                                  You get
+                                </dt>
+                                <dd className="font-medium text-foreground">
+                                  {selectedPlan.amount.toLocaleString()} coins ·
+                                  ${selectedPlan.price}
+                                </dd>
+                              </div>
+                              {selectedCurrency.network && (
+                                <div className="flex items-center justify-between gap-3">
+                                  <dt className="text-muted-foreground">
+                                    Network
+                                  </dt>
+                                  <dd className="font-medium text-foreground uppercase">
+                                    {selectedCurrency.network}
+                                  </dd>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between gap-3">
+                                <dt className="text-muted-foreground">
+                                  Minimum payment
+                                </dt>
+                                <dd
+                                  className={cn(
+                                    "font-medium",
+                                    belowMinimum
+                                      ? "text-destructive"
+                                      : "text-foreground"
+                                  )}
+                                >
+                                  {formatCryptoAmount(minAmount)}{" "}
+                                  <span className="uppercase">
+                                    {selectedCurrency.name}
+                                  </span>
+                                  {formatUsd(quote.minimum.fiat_equivalent) && (
+                                    <span className="text-muted-foreground">
+                                      {" "}
+                                      ≈{" "}
+                                      {formatUsd(quote.minimum.fiat_equivalent)}
+                                    </span>
+                                  )}
+                                </dd>
+                              </div>
+                            </dl>
+                          </div>
+
+                          {belowMinimum && (
+                            <div className="mt-3 flex gap-2.5 rounded-xl border border-destructive/30 bg-destructive/5 p-3">
+                              <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                <span className="text-foreground font-medium">
+                                  Below the minimum for{" "}
+                                  {selectedCurrency.name.toUpperCase()}.
+                                </span>{" "}
+                                Pick a larger coin pack or choose a different
+                                payment currency.
+                              </p>
+                            </div>
+                          )}
+
+                          {!quoteUsable && (
+                            <div className="mt-3 flex gap-2.5 rounded-xl border border-border/30 bg-muted/5 p-3">
+                              <AlertCircle className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                              <p className="text-xs text-muted-foreground leading-relaxed">
+                                We couldn&apos;t read a valid rate for this
+                                currency. Try refreshing or pick another one.
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="mt-4 space-y-2">
+                            <button
+                              onClick={handleConfirmPayment}
+                              disabled={
+                                belowMinimum || !quoteUsable || !!loadingMethod
+                              }
+                              className={cn(
+                                "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors",
+                                "bg-primary text-primary-foreground hover:bg-primary/90",
+                                "disabled:opacity-40 disabled:cursor-not-allowed"
+                              )}
+                            >
+                              {loadingMethod === "now-payments" ? (
+                                <Spinner className="w-4 h-4" />
+                              ) : (
+                                <>
+                                  Continue to payment
+                                  <ChevronRight className="w-4 h-4" />
+                                </>
+                              )}
+                            </button>
+
+                            <div className="flex items-center justify-between">
+                              <button
+                                onClick={goBack}
+                                disabled={!!loadingMethod}
+                                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                              >
+                                Change currency
+                              </button>
+                              <button
+                                onClick={refreshQuote}
+                                disabled={!!loadingMethod}
+                                className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                                Refresh rate
+                              </button>
+                            </div>
+                          </div>
+
+                          <p className="text-center text-[11px] text-muted-foreground mt-3">
+                            Rates are estimates and settle at the amount
+                            confirmed when you pay.
+                          </p>
+                        </>
+                      )}
+                  </div>
+                )}
               </div>
             </motion.div>
           </>
