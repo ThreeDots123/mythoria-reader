@@ -78,6 +78,57 @@ export async function getUserCoinPurchasesAction() {
   } as const;
 }
 
+export async function getCryptoCurrenciesAction() {
+  const response = await apiClientManager.getCryptoCurrencies();
+
+  if (!response.success) {
+    return {
+      success: false,
+      error: response.error.message,
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: response.data,
+  } as const;
+}
+
+export async function getCryptoMinimumAmountAction(currency: string) {
+  const response = await apiClientManager.getCryptoMinimumAmount(currency);
+
+  if (!response.success) {
+    return {
+      success: false,
+      error: response.error.message,
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: response.data,
+  } as const;
+}
+
+export async function getCryptoEstimateAction(
+  currency: string,
+  amount: number,
+) {
+  const response = await apiClientManager.getCryptoEstimate(currency, amount);
+
+  if (!response.success) {
+    return {
+      success: false,
+      error: response.error.message,
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: response.data,
+  } as const;
+}
+
 export async function getCoinPurchaseAction(purchaseId: string) {
   const cookieHeader = await getCookieHeader();
   const response = await apiClientManager.getCoinPurchase(

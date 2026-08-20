@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { User, getUser, setUser, clearAuth } from "@/utils/auth";
 import apiClientManager from "@/api/interface";
 
@@ -45,12 +52,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     fetchCurrentUser();
   }, []);
 
-  const login = (userData: User) => {
+  // These are handed to consumers as effect dependencies, so they have to keep
+  // a stable identity — a new function each render re-runs their effects.
+  const login = useCallback((userData: User) => {
     setUser(userData);
     setUserState(userData);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await apiClientManager.logout();
     } catch (error) {
@@ -59,14 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearAuth();
       setUserState(null);
     }
-  };
+  }, []);
 
-  const updateUser = (userData: User) => {
+  const updateUser = useCallback((userData: User) => {
     setUser(userData);
     setUserState(userData);
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       const result = await apiClientManager.getCurrentUser();
       if (result.success && result.data) {
@@ -80,20 +89,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearAuth();
       setUserState(null);
     }
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated: !!user,
+      isLoading,
+      login,
+      logout,
+      updateUser,
+      refreshUser,
+    }),
+    [user, isLoading, login, logout, updateUser, refreshUser],
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        logout,
-        updateUser,
-        refreshUser,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
