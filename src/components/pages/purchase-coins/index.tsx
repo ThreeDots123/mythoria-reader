@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -18,6 +18,11 @@ import { toast } from "sonner";
 import { PiCoinsThin } from "react-icons/pi";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Lock,
@@ -37,6 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const COINS_PER_CHAPTER = 15;
+const PAYPAL_ENABLED = false as boolean;
 
 const coinPlans = [
   {
@@ -232,6 +238,16 @@ export default function PurchaseCoinsComponent() {
   const [quote, setQuote] = useState<CryptoQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [methodNotice, setMethodNotice] = useState<
+    "paypal" | "now-payments" | null
+  >(null);
+
+  // The method tooltips open on click rather than hover, so they dismiss themselves
+  useEffect(() => {
+    if (!methodNotice) return;
+    const timer = setTimeout(() => setMethodNotice(null), 2500);
+    return () => clearTimeout(timer);
+  }, [methodNotice]);
 
   const balance = user?.coinBalance ?? 0;
   const chaptersWorth = Math.floor(balance / COINS_PER_CHAPTER);
@@ -269,6 +285,7 @@ export default function PurchaseCoinsComponent() {
     if (loadingMethod) return;
     setSelectedPlan(null);
     setStep("method");
+    setMethodNotice(null);
     setSelectedCurrency(null);
     setCurrencyQuery("");
     setQuote(null);
@@ -287,6 +304,10 @@ export default function PurchaseCoinsComponent() {
   };
 
   const handlePayPal = async () => {
+    if (!PAYPAL_ENABLED) {
+      setMethodNotice("paypal");
+      return;
+    }
     if (!selectedPlan) return;
     setLoadingMethod("paypal");
     try {
@@ -330,6 +351,7 @@ export default function PurchaseCoinsComponent() {
   };
 
   const handleCrypto = async () => {
+    setMethodNotice("now-payments");
     return;
     if (!selectedPlan) return;
     setStep("crypto");
@@ -662,81 +684,90 @@ export default function PurchaseCoinsComponent() {
                 {step === "method" ? (
                   <div className="px-6 pb-6 space-y-3">
                     {/* PayPal */}
-                    <button
-                      onClick={handlePayPal}
-                      disabled={!!loadingMethod}
-                      className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
-                        "border-border/30 bg-card hover:border-primary/40 hover:bg-primary/5",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
-                      )}
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-[#003087]/10 border border-[#003087]/20 flex items-center justify-center shrink-0">
-                        <svg
-                          viewBox="0 0 24 24"
-                          className="w-5 h-5"
-                          fill="none"
+                    <Tooltip open={methodNotice === "paypal"}>
+                      <TooltipTrigger asChild>
+                        {/* aria-disabled, not disabled: a disabled button fires no click to show the tooltip */}
+                        <button
+                          onClick={handlePayPal}
+                          aria-disabled
+                          className="w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left border-border/30 bg-card opacity-50 cursor-not-allowed"
                         >
-                          <path
-                            d="M19.5 8.5c.3-2-1.2-3.5-3.8-3.5H9.3c-.3 0-.5.2-.6.5L6.2 17c0 .2.1.4.4.4h2.9l.7-4.6v.2c.1-.3.3-.5.6-.5h1.3c2.5 0 4.4-1 5-4 .2-1.1.1-1.9-.4-2.5z"
-                            fill="#009CDE"
-                          />
-                          <path
-                            d="M19.9 11c-.6 3-2.5 4-5 4h-1.3c-.3 0-.5.2-.6.5L12 20h-2.5l-.4 2.4c0 .2.1.3.3.3h2.4c.3 0 .5-.2.5-.4l.6-4h1.3c2.5 0 4.4-1 5-4 .2-1.1.1-2.1-.3-2.3z"
-                            fill="#012169"
-                          />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground">
-                          PayPal
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Pay securely with your PayPal account
-                        </p>
-                      </div>
-                      {loadingMethod === "paypal" ? (
-                        <Spinner className="w-4 h-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </button>
+                          <div className="w-10 h-10 rounded-lg bg-[#003087]/10 border border-[#003087]/20 flex items-center justify-center shrink-0">
+                            <svg
+                              viewBox="0 0 24 24"
+                              className="w-5 h-5"
+                              fill="none"
+                            >
+                              <path
+                                d="M19.5 8.5c.3-2-1.2-3.5-3.8-3.5H9.3c-.3 0-.5.2-.6.5L6.2 17c0 .2.1.4.4.4h2.9l.7-4.6v.2c.1-.3.3-.5.6-.5h1.3c2.5 0 4.4-1 5-4 .2-1.1.1-1.9-.4-2.5z"
+                                fill="#009CDE"
+                              />
+                              <path
+                                d="M19.9 11c-.6 3-2.5 4-5 4h-1.3c-.3 0-.5.2-.6.5L12 20h-2.5l-.4 2.4c0 .2.1.3.3.3h2.4c.3 0 .5-.2.5-.4l.6-4h1.3c2.5 0 4.4-1 5-4 .2-1.1.1-2.1-.3-2.3z"
+                                fill="#012169"
+                              />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground">
+                              PayPal
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Pay securely with your PayPal account
+                            </p>
+                          </div>
+                          {loadingMethod === "paypal" ? (
+                            <Spinner className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={6}>
+                        We&apos;re working on it, please be a little patient
+                      </TooltipContent>
+                    </Tooltip>
 
                     {/* NOWPayments */}
-                    <button
-                      onClick={handleCrypto}
-                      disabled={!!loadingMethod}
-                      className={cn(
-                        "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
-                        "border-border/30 bg-card hover:border-primary/40 hover:bg-primary/5",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
-                      )}
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                        <svg
-                          viewBox="0 0 32 36"
-                          className="w-4.5 h-4.5 text-emerald-400"
-                          fill="currentColor"
+                    <Tooltip open={methodNotice === "now-payments"}>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={handleCrypto}
+                          disabled={!!loadingMethod}
+                          className={cn(
+                            "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
+                            "border-border/30 bg-card hover:border-primary/40 hover:bg-primary/5",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                          )}
                         >
-                          <path d="M30.611 8.507 16.935.61a2.01 2.01 0 0 0-2.005 0L1.254 8.507A2.01 2.01 0 0 0 .25 10.245v15.791c0 .713.384 1.378 1.004 1.738L14.93 35.67a2.034 2.034 0 0 0 2.008 0l13.677-7.896a2.01 2.01 0 0 0 1.004-1.738V10.245c0-.713-.385-1.378-1.004-1.738zM16.242 17.16a.62.62 0 0 1-.62 0L2.328 9.487l13.296-7.675a.64.64 0 0 1 .62 0l13.295 7.675zm-1.312 1.197q.146.084.312.142v15.743l-13.296-7.67a.62.62 0 0 1-.311-.537V10.684z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-foreground">
-                            NOWPayments (Coming Soon)
-                          </p>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          Pay with Bitcoin, USDT and more
-                        </p>
-                      </div>
-                      {loadingMethod === "now-payments" ? (
-                        <Spinner className="w-4 h-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                      )}
-                    </button>
+                          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                            <svg
+                              viewBox="0 0 32 36"
+                              className="w-4.5 h-4.5 text-emerald-400"
+                              fill="currentColor"
+                            >
+                              <path d="M30.611 8.507 16.935.61a2.01 2.01 0 0 0-2.005 0L1.254 8.507A2.01 2.01 0 0 0 .25 10.245v15.791c0 .713.384 1.378 1.004 1.738L14.93 35.67a2.034 2.034 0 0 0 2.008 0l13.677-7.896a2.01 2.01 0 0 0 1.004-1.738V10.245c0-.713-.385-1.378-1.004-1.738zM16.242 17.16a.62.62 0 0 1-.62 0L2.328 9.487l13.296-7.675a.64.64 0 0 1 .62 0l13.295 7.675zm-1.312 1.197q.146.084.312.142v15.743l-13.296-7.67a.62.62 0 0 1-.311-.537V10.684z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-foreground">
+                                NOWPayments (Coming Soon)
+                              </p>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              Pay with Bitcoin, USDT and more
+                            </p>
+                          </div>
+                          {loadingMethod === "now-payments" ? (
+                            <Spinner className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent sideOffset={6}>Coming soon</TooltipContent>
+                    </Tooltip>
                   </div>
                 ) : step === "crypto" ? (
                   /* Crypto currency picker */

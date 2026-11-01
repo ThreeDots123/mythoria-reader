@@ -1,5 +1,6 @@
 import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
+import { Analytics } from "@vercel/analytics/next"
 import { cormorant, satoshi } from "./font";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body
         className={`${cormorant.variable} ${satoshi.variable} font-body antialiased`}
       >
+        
         <NextTopLoader />
         {children}
         <Toaster position="top-right" />
