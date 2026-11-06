@@ -42,7 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const COINS_PER_CHAPTER = 15;
-const PAYPAL_ENABLED = false as boolean;
+const PAYPAL_ENABLED = true as boolean;
 
 const coinPlans = [
   {
@@ -188,7 +188,7 @@ function CurrencyIcon({ name, logo }: { name: string; logo: string }) {
  */
 function readEstimatedCryptoAmount(
   estimate: CryptoEstimateResponse,
-  currencyName: string
+  currencyName: string,
 ) {
   const ticker = currencyName.toLowerCase();
   if (estimate.currency_to?.toLowerCase() === ticker) {
@@ -267,7 +267,7 @@ export default function PurchaseCoinsComponent() {
     return currencies.filter(
       (currency) =>
         currency.name.toLowerCase().includes(query) ||
-        currency.network?.toLowerCase().includes(query)
+        currency.network?.toLowerCase().includes(query),
     );
   }, [currencies, currencyQuery]);
 
@@ -462,7 +462,7 @@ export default function PurchaseCoinsComponent() {
                   "focus-visible:ring-2 focus-visible:ring-primary/50",
                   plan.recommended
                     ? "border-coin-gold/40 bg-linear-to-br from-coin-gold/10 to-card hover:border-coin-gold/60 hover:shadow-xl hover:shadow-coin-gold/10"
-                    : "border-border/30 bg-card hover:border-border/60 hover:shadow-lg hover:shadow-black/10"
+                    : "border-border/30 bg-card hover:border-border/60 hover:shadow-lg hover:shadow-black/10",
                 )}
               >
                 {/* Top row: badges */}
@@ -488,7 +488,7 @@ export default function PurchaseCoinsComponent() {
                   <PiCoinsThin
                     className={cn(
                       "w-8 h-8",
-                      plan.recommended ? "text-coin-gold" : "text-coin-gold/70"
+                      plan.recommended ? "text-coin-gold" : "text-coin-gold/70",
                     )}
                   />
                   <span className="text-4xl font-bold text-foreground tracking-tight">
@@ -509,7 +509,7 @@ export default function PurchaseCoinsComponent() {
                     "mt-auto flex items-center justify-between px-4 py-3 rounded-xl font-semibold text-sm transition-colors",
                     plan.recommended
                       ? "bg-coin-gold text-black group-hover:bg-coin-gold-hover"
-                      : "bg-muted/20 text-foreground group-hover:bg-muted/30"
+                      : "bg-muted/20 text-foreground group-hover:bg-muted/30",
                   )}
                 >
                   <span className="text-base font-bold">${plan.price}</span>
@@ -654,8 +654,8 @@ export default function PurchaseCoinsComponent() {
                         {step === "method"
                           ? "Choose payment method"
                           : step === "crypto"
-                          ? "Select payment currency"
-                          : "Review payment"}
+                            ? "Select payment currency"
+                            : "Review payment"}
                       </h3>
                       <div className="flex items-center gap-1.5 mt-1">
                         <PiCoinsThin className="w-4 h-4 text-coin-gold" />
@@ -690,7 +690,7 @@ export default function PurchaseCoinsComponent() {
                         <button
                           onClick={handlePayPal}
                           aria-disabled
-                          className="w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left border-border/30 bg-card opacity-50 cursor-not-allowed"
+                          className="w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left border-border/30 bg-card"
                         >
                           <div className="w-10 h-10 rounded-lg bg-[#003087]/10 border border-[#003087]/20 flex items-center justify-center shrink-0">
                             <svg
@@ -737,7 +737,7 @@ export default function PurchaseCoinsComponent() {
                           className={cn(
                             "w-full flex items-center gap-4 p-4 rounded-xl border transition-all text-left",
                             "border-border/30 bg-card hover:border-primary/40 hover:bg-primary/5",
-                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                            "disabled:opacity-50 disabled:cursor-not-allowed",
                           )}
                         >
                           <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
@@ -766,7 +766,9 @@ export default function PurchaseCoinsComponent() {
                           )}
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent sideOffset={6}>Coming soon</TooltipContent>
+                      <TooltipContent sideOffset={6}>
+                        Coming soon
+                      </TooltipContent>
                     </Tooltip>
                   </div>
                 ) : step === "crypto" ? (
@@ -850,7 +852,7 @@ export default function PurchaseCoinsComponent() {
                                 "disabled:opacity-50 disabled:cursor-not-allowed",
                                 isSelected
                                   ? "border-primary/50 bg-primary/5"
-                                  : "border-border/30 bg-card hover:border-border/60 hover:bg-muted/10"
+                                  : "border-border/30 bg-card hover:border-border/60 hover:bg-muted/10",
                               )}
                             >
                               <CurrencyIcon
@@ -883,7 +885,7 @@ export default function PurchaseCoinsComponent() {
                         className={cn(
                           "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors",
                           "bg-primary text-primary-foreground hover:bg-primary/90",
-                          "disabled:opacity-40 disabled:cursor-not-allowed"
+                          "disabled:opacity-40 disabled:cursor-not-allowed",
                         )}
                       >
                         {loadingMethod === "now-payments" ? (
@@ -999,7 +1001,7 @@ export default function PurchaseCoinsComponent() {
                                     "font-medium",
                                     belowMinimum
                                       ? "text-destructive"
-                                      : "text-foreground"
+                                      : "text-foreground",
                                   )}
                                 >
                                   {formatCryptoAmount(minAmount)}{" "}
@@ -1051,7 +1053,7 @@ export default function PurchaseCoinsComponent() {
                               className={cn(
                                 "w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-colors",
                                 "bg-primary text-primary-foreground hover:bg-primary/90",
-                                "disabled:opacity-40 disabled:cursor-not-allowed"
+                                "disabled:opacity-40 disabled:cursor-not-allowed",
                               )}
                             >
                               {loadingMethod === "now-payments" ? (
